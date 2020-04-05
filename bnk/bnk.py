@@ -174,12 +174,13 @@ class Tensor:
         
         traced = self
         for space in spaces:
-            ket_axis = traced.dims.index(KetDimension(space))
-            if ket_axis == -1:
+            try:
+                ket_axis = traced.dims.index(KetDimension(space))
+            except ValueError:
                 continue
-            
-            bra_axis = traced.dims.index(BraDimension(space))
-            if bra_axis == -1:
+            try:
+                bra_axis = traced.dims.index(BraDimension(space))
+            except ValueError:
                 continue
             
             new_dims = tuple(dim for axis, dim in enumerate(traced.dims) if axis not in (ket_axis, bra_axis))
