@@ -151,7 +151,12 @@ class QTensor:
         new_values = np.transpose(self.values, axes=new_axes)
         return QTensor(new_dims, new_values)
     
-    def broadcast(self, new_dims: Iterable[Dimension]):
+    def broadcast(self, new_dims: Iterable[QDimension]):
+        if len(self.dims) == 0:
+            if self.values == 0:
+                values = np.zeros([dim.n for dim in new_dims])
+                return QTensor(new_dims, values)
+        
         broadcast_pairs = {}
         for dim in new_dims:
             if dim in self.dims:
