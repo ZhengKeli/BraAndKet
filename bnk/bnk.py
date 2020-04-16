@@ -189,8 +189,7 @@ class Tensor:
         
         return traced
     
-    @property
-    def flattened_values(self):
+    def flatten(self):
         oth_dims = []
         ket_dims = []
         bra_dims = []
@@ -202,22 +201,29 @@ class Tensor:
             else:
                 oth_dims.append(dim)
         
-        oth_dims = sorted(oth_dims, key=lambda dm: (dm.key, -dm.n, dm.name))
-        ket_dims = sorted(ket_dims, key=lambda dm: (dm.key, -dm.n, dm.name))
-        bra_dims = sorted(bra_dims, key=lambda dm: (dm.key, -dm.n, dm.name))
+        oth_dims = tuple(sorted(oth_dims, key=lambda dm: (dm.key, -dm.n, dm.name)))
+        ket_dims = tuple(sorted(ket_dims, key=lambda dm: (dm.key, -dm.n, dm.name)))
+        bra_dims = tuple(sorted(bra_dims, key=lambda dm: (dm.key, -dm.n, dm.name)))
         
         flattened_oth_dim = np.prod([dim.n for dim in oth_dims], dtype=int)
         flattened_ket_dim = np.prod([dim.n for dim in ket_dims], dtype=int)
         flattened_bra_dim = np.prod([dim.n for dim in bra_dims], dtype=int)
         
         if flattened_oth_dim == 1:
+            corr_dims = ket_dims, bra_dims
             flattened_shape = [flattened_ket_dim, flattened_bra_dim]
         else:
+            corr_dims = oth_dims, ket_dims, bra_dims
             flattened_shape = [flattened_oth_dim, flattened_ket_dim, flattened_bra_dim]
         
         transposed = self.transposed([*oth_dims, *ket_dims, *bra_dims])
         flattened_values = np.reshape(transposed.values, flattened_shape)
         
+        return corr_dims, flattened_values
+    
+    @property
+    def flattened_values(self):
+        _, flattened_values = self.flatten()
         return flattened_values
     
     # tensor operations
