@@ -6,7 +6,7 @@ import numpy as np
 
 # space
 
-class Space:
+class HSpace:
     def __init__(self, n, name=None, key=None):
         self._n = n
         self._name = name
@@ -59,8 +59,8 @@ class DimensionType(enum.Enum):
         return str(self)
 
 
-class Dimension:
-    def __init__(self, typ: DimensionType, space: Space):
+class QDimension:
+    def __init__(self, typ: DimensionType, space: HSpace):
         self._typ = typ
         self._space = space
     
@@ -94,10 +94,12 @@ class Dimension:
     
     @property
     def ct(self):
-        return Dimension(self.typ.ct, self.space)
+        return QDimension(self.typ.ct, self.space)
     
     def __eq__(self, other):
-        return isinstance(other, Dimension) and \
+        if self is other:
+            return True
+        return isinstance(other, QDimension) and \
                other.space == self.space and \
                other.typ == self.typ
     
@@ -105,23 +107,23 @@ class Dimension:
         return f"<Dimension: typ={self.typ}, n={self.n}, name={self.name}>"
 
 
-def KetDimension(space: Space):
-    return Dimension(DimensionType.Ket, space)
+def KetDimension(space: HSpace):
+    return QDimension(DimensionType.Ket, space)
 
 
-def BraDimension(space: Space):
-    return Dimension(DimensionType.Bra, space)
+def BraDimension(space: HSpace):
+    return QDimension(DimensionType.Bra, space)
 
 
-def OtherDimension(space: Space):
-    return Dimension(DimensionType.Other, space)
+def OtherDimension(space: HSpace):
+    return QDimension(DimensionType.Other, space)
 
 
 # tensor
 
-class Tensor:
-    def __init__(self, dims: Iterable[Dimension], values):
-        dims: Tuple[Dimension, ...] = tuple(dims)
+class QTensor:
+    def __init__(self, dims: Iterable[QDimension], values):
+        dims: Tuple[QDimension, ...] = tuple(dims)
         values: np.ndarray = np.asarray(values)
         
         for i, dim in enumerate(dims):
@@ -144,10 +146,10 @@ class Tensor:
     
     # dimension operations
     
-    def transposed(self, new_dims: Iterable[Dimension]):
+    def transposed(self, new_dims: Iterable[QDimension]):
         new_axes = [self.dims.index(new_dim) for new_dim in new_dims]
         new_values = np.transpose(self.values, axes=new_axes)
-        return Tensor(new_dims, new_values)
+        return QTensor(new_dims, new_values)
     
     def broadcast(self, new_dims: Iterable[Dimension]):
         broadcast_pairs = {}
@@ -168,7 +170,7 @@ class Tensor:
         
         return self @ broadcast_identity
     
-    def trace(self, *spaces: Space):
+    def trace(self, *spaces: HSpace):
         if len(spaces) == 0:
             spaces = tuple(dim.space for dim in self.dims)
         
@@ -185,7 +187,7 @@ class Tensor:
             
             new_dims = tuple(dim for axis, dim in enumerate(traced.dims) if axis not in (ket_axis, bra_axis))
             new_values = np.trace(traced.values, axis1=ket_axis, axis2=bra_axis)
-            traced = Tensor(new_dims, new_values)
+            traced = QTensor(new_dims, new_values)
         
         return traced
     
@@ -232,10 +234,10 @@ class Tensor:
     def ct(self):
         new_dims = [dim.ct for dim in self.dims]
         new_values = np.conjugate(self.values)
-        return Tensor(new_dims, new_values)
+        return QTensor(new_dims, new_values)
     
     def __matmul__(self, other):
-        if not isinstance(other, Tensor):
+        if not isinstance(other, QTensor):
             raise NotImplementedError()
         
         self_dot_axes = []
@@ -258,7 +260,7 @@ class Tensor:
         new_dims = [*new_self_dims, *new_other_dims]
         new_values = np.tensordot(self.values, other.values, (self_dot_axes, other_dot_axes))
         
-        return Tensor(new_dims, new_values)
+        return QTensor(new_dims, new_values)
     
     # linear operations
     
@@ -271,7 +273,7 @@ class Tensor:
     def __add__(self, other):
         if other == 0:
             return self
-        if not isinstance(other, Tensor):
+        if not isinstance(other, QTensor):
             raise NotImplementedError
         broadcast_self = self.broadcast(other.dims)
         broadcast_other = other.broadcast(self.dims)
@@ -280,7 +282,7 @@ class Tensor:
         broadcast_other = broadcast_other.transposed(new_dims)
         
         new_values = broadcast_self.values + broadcast_other.values
-        return Tensor(new_dims, new_values)
+        return QTensor(new_dims, new_values)
     
     def __radd__(self, other):
         if other == 0:
@@ -290,12 +292,12 @@ class Tensor:
     def __sub__(self, other):
         if other == 0:
             return self
-        if not isinstance(other, Tensor):
+        if not isinstance(other, QTensor):
             raise NotImplementedError
         other = other.transposed(self.dims)
         new_dims = self.dims
         new_values = self.values - other.values
-        return Tensor(new_dims, new_values)
+        return QTensor(new_dims, new_values)
     
     def __rsub__(self, other):
         if other == 0:
@@ -305,39 +307,52 @@ class Tensor:
     def __mul__(self, other):
         new_dims = self.dims
         new_values = self.values * other
-        return Tensor(new_dims, new_values)
+        return QTensor(new_dims, new_values)
     
     def __truediv__(self, other):
         new_dims = self.dims
         new_values = self.values / other
-        return Tensor(new_dims, new_values)
+        return QTensor(new_dims, new_values)
     
     def __rmul__(self, other):
         return self * other
+    
+    # other operations
     
     def __float__(self):
         if len(self.dims) == 0:
             return np.abs(self.values)
         else:
             raise RuntimeError("Can not convert Tensor with rank>0 to float!")
+    
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if not isinstance(other, QTensor):
+            return False
+        if not self.dims == other.dims:
+            return False
+        if self.values is other.values:
+            return True
+        return np.all(self.values == other.values)
 
 
-zero = Tensor([], np.zeros([], np.float32))
+zero = QTensor([], np.zeros([], np.float32))
 
-one = Tensor([], np.ones([], np.float32))
+one = QTensor([], np.ones([], np.float32))
 
 
-def KetVector(spaces: Iterable[Space], values):
+def KetVector(spaces: Iterable[HSpace], values):
     ket_dims = [KetDimension(space) for space in spaces]
-    return Tensor(ket_dims, values)
+    return QTensor(ket_dims, values)
 
 
-def BraVector(spaces: Iterable[Space], values):
+def BraVector(spaces: Iterable[HSpace], values):
     bra_dims = [BraDimension(space) for space in spaces]
-    return Tensor(bra_dims, values)
+    return QTensor(bra_dims, values)
 
 
-def Operator(spaces: Iterable[Space], values):
+def Operator(spaces: Iterable[HSpace], values):
     ket_dims = [KetDimension(space) for space in spaces]
     bra_dims = [BraDimension(space) for space in spaces]
-    return Tensor(ket_dims + bra_dims, values)
+    return QTensor(ket_dims + bra_dims, values)

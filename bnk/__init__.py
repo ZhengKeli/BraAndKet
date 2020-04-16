@@ -1,2 +1,2 @@
-from .bnk import Space, KetDimension, BraDimension, OtherDimension
-from .bnk import Tensor, one, zero, KetVector, BraVector, Operator
+from .tensor import HSpace, KetDimension, BraDimension, OtherDimension
+from .tensor import QTensor, one, zero, KetVector, BraVector, Operator
