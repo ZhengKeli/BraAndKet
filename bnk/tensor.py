@@ -299,9 +299,13 @@ class QTensor:
             return self
         if not isinstance(other, QTensor):
             raise NotImplementedError
-        other = other.transposed(self.dims)
-        new_dims = self.dims
-        new_values = self.values - other.values
+        broadcast_self = self.broadcast(other.dims)
+        broadcast_other = other.broadcast(self.dims)
+        
+        new_dims = broadcast_self.dims
+        broadcast_other = broadcast_other.transposed(new_dims)
+        
+        new_values = broadcast_self.values - broadcast_other.values
         return QTensor(new_dims, new_values)
     
     def __rsub__(self, other):
@@ -333,18 +337,27 @@ class QTensor:
     def __eq__(self, other):
         if self is other:
             return True
+        if other == 0:
+            return len(self.dims) == 0 and self.values == 0
         if not isinstance(other, QTensor):
             return False
-        if not self.dims == other.dims:
-            return False
-        if self.values is other.values:
-            return True
-        return np.all(self.values == other.values)
+        
+        if self.dims == other.dims:
+            if self.values is other.values:
+                return True
+            if np.all(self.values == other.values):
+                return True
+        
+        broadcast_self = self.broadcast(other.dims)
+        broadcast_other = other.broadcast(self.dims)
+        broadcast_other = broadcast_other.transposed(broadcast_self.dims)
+        
+        return np.all(broadcast_self.values == broadcast_other.values)
 
 
-zero = QTensor([], np.zeros([], np.float32))
+zero = QTensor([], np.zeros([], np.float))
 
-one = QTensor([], np.ones([], np.float32))
+one = QTensor([], np.ones([], np.float))
 
 
 def KetVector(spaces: Iterable[HSpace], values):
