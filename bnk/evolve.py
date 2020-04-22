@@ -21,16 +21,16 @@ def evolve_schrodinger(psi, hmt, hb, span, dt, rectify=True):
         psi_matrix /= np.sqrt(np.sum(np.conj(psi_matrix) * psi_matrix))
     
     psi_matrix = psi_matrix.reshape([dim.n for group in psi_dims for dim in group])
-    psi = QTensor([dim for group in psi_dims for dim in group], psi_matrix)
+    psi = QTensor([dim for group in psi_dims for dim in group], np.copy(psi_matrix))
     
     return psi.transposed(org_psi_dims)
 
 
-def evolve_schrodinger_with_logs(psi0, hmt, hb, mt, dt, dlt, rectify=True, logger=None, verbose=True):
+def evolve_schrodinger_with_logs(psi0, hmt, hb, mt, dt, dlt, t0=0.0, rectify=True, logger=None, verbose=True):
     if logger is None:
         logger = lambda ps: ps.values
     
-    t = 0.0
+    t = t0
     psi = psi0
     
     lt = t
@@ -47,7 +47,7 @@ def evolve_schrodinger_with_logs(psi0, hmt, hb, mt, dt, dlt, rectify=True, logge
         logs_v.append(logger(psi))
         if verbose:
             print(f"\rcomputing...{t / mt:.2%}", end='')
-    print()
+    print(f"\rcomputing...{1.0:.2%}")
     
     logs_t = np.asarray(logs_t)
     try:
