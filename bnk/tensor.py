@@ -163,9 +163,10 @@ class QTensor:
                 continue
             pair = broadcast_pairs.get(dim.space)
             if pair is None:
-                pair = []
+                pair = [dim]
                 broadcast_pairs[dim.space] = pair
-            pair.append(dim)
+            elif dim not in pair:
+                pair.append(dim)
         
         broadcast_identity = one
         for space, dims in broadcast_pairs.items():
