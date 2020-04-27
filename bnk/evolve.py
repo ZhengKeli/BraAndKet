@@ -3,7 +3,7 @@ import numpy as np
 from bnk import QTensor
 
 
-def evolve_schrodinger(psi, hmt, hb, mt, dt):
+def evolve_schrodinger(psi, hmt, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
     
@@ -26,20 +26,19 @@ def evolve_schrodinger(psi, hmt, hb, mt, dt):
     return psi
 
 
-def evolve_schrodinger_with_logs(psi0, hmt, hb, mt, dt, dlt, t0=0.0, rectify=True, logger=None, verbose=True):
-    if logger is None:
-        logger = lambda ps: ps.values
+def evolve_schrodinger_with_logs(t0, psi0, hmt, hb, span, dt, dlt, rectify=True, verbose=True):
+    mt = t0 + span
     
     t = t0
     psi = psi0
     
     lt = t
     logs_t = [lt]
-    logs_v = [logger(psi)]
+    logs_psi = [psi]
     
     while t < mt:
         sp = np.maximum(np.minimum(lt + dlt, mt) - t, 0.0)
-        psi = evolve_schrodinger(psi, hmt, hb, sp, dt)
+        psi = evolve_schrodinger(psi, hmt, hb, dt, sp)
         
         if rectify:
             psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
@@ -49,24 +48,18 @@ def evolve_schrodinger_with_logs(psi0, hmt, hb, mt, dt, dlt, t0=0.0, rectify=Tru
         t += sp
         lt = t
         logs_t.append(t)
-        logs_v.append(logger(psi))
+        logs_psi.append(psi)
         
         if verbose:
-            print(f"\rcomputing...{t / mt:.2%}", end='')
+            print(f"\rcomputing...{(t - t0) / span:.2%}", end='')
     
     if verbose:
         print(f"\rcomputing...{1.0:.2%}")
     
-    logs_t = np.asarray(logs_t)
-    try:
-        logs_v = np.asarray(logs_v)
-    except RuntimeError:
-        pass
-    
-    return psi, logs_t, logs_v
+    return t, psi, logs_t, logs_psi
 
 
-def evolve_lindblad(rho, hmt, deco, hb, mt, dt):
+def evolve_lindblad(rho, hmt, deco, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
     
@@ -102,20 +95,19 @@ def evolve_lindblad(rho, hmt, deco, hb, mt, dt):
     return rho
 
 
-def evolve_lindblad_with_logs(rho0, hmt, deco, hb, mt, dt, dlt, t0=0.0, rectify=True, logger=None, verbose=True):
-    if logger is None:
-        logger = lambda ro: ro.values
+def evolve_lindblad_with_logs(t0, rho0, hmt, deco, hb, span, dt, dlt, rectify=True, verbose=True):
+    mt = t0 + span
     
     t = t0
     rho = rho0
     
     lt = t
     logs_t = [lt]
-    logs_v = [logger(rho)]
+    logs_rho = [rho]
     
     while t < mt:
         sp = np.maximum(np.minimum(lt + dlt, mt) - t, 0.0)
-        rho = evolve_lindblad(rho, hmt, deco, hb, sp, dt)
+        rho = evolve_lindblad(rho, hmt, deco, hb, dt, sp)
         
         if rectify:
             rho /= rho.trace().values
@@ -125,18 +117,18 @@ def evolve_lindblad_with_logs(rho0, hmt, deco, hb, mt, dt, dlt, t0=0.0, rectify=
         t += sp
         lt = t
         logs_t.append(t)
-        logs_v.append(logger(rho))
+        logs_rho.append(rho)
         
         if verbose:
-            print(f"\rcomputing...{t / mt:.2%}", end='')
+            print(f"\rcomputing...{(t - t0) / span:.2%}", end='')
     
     if verbose:
         print(f"\rcomputing...{1.0:.2%}")
     
     logs_t = np.asarray(logs_t)
     try:
-        logs_v = np.asarray(logs_v)
+        logs_rho = np.asarray(logs_rho)
     except RuntimeError:
         pass
     
-    return rho, logs_t, logs_v
+    return t, rho, logs_t, logs_rho
