@@ -147,6 +147,8 @@ class QTensor:
     # dimension operations
     
     def transposed(self, new_dims: Iterable[QDimension]):
+        if self.dims == new_dims:
+            return self
         new_axes = [self.dims.index(new_dim) for new_dim in new_dims]
         new_values = np.transpose(self.values, axes=new_axes)
         return QTensor(new_dims, new_values)

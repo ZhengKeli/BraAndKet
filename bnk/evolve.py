@@ -3,6 +3,8 @@ import numpy as np
 from bnk import QTensor
 
 
+# accelerated evolve functions
+
 def evolve_schrodinger(psi, hmt, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
@@ -24,39 +26,6 @@ def evolve_schrodinger(psi, hmt, hb, dt, mt):
     psi = QTensor([dim for group in psi_dims for dim in group], np.copy(psi))
     
     return psi
-
-
-def evolve_schrodinger_with_logs(t0, psi0, hmt, hb, span, dt, dlt, rectify=True, verbose=True):
-    mt = t0 + span
-    
-    t = t0
-    psi = psi0
-    
-    lt = t
-    logs_t = [lt]
-    logs_psi = [psi]
-    
-    while t < mt:
-        sp = np.maximum(np.minimum(lt + dlt, mt) - t, 0.0)
-        psi = evolve_schrodinger(psi, hmt, hb, dt, sp)
-        
-        if rectify:
-            psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
-        
-        psi = psi.transposed(psi0.dims)
-        
-        t += sp
-        lt = t
-        logs_t.append(t)
-        logs_psi.append(psi)
-        
-        if verbose:
-            print(f"\rcomputing...{(t - t0) / span:.2%}", end='')
-    
-    if verbose:
-        print(f"\rcomputing...{1.0:.2%}")
-    
-    return t, psi, logs_t, logs_psi
 
 
 def evolve_lindblad(rho, hmt, deco, hb, dt, mt):
@@ -95,40 +64,61 @@ def evolve_lindblad(rho, hmt, deco, hb, dt, mt):
     return rho
 
 
-def evolve_lindblad_with_logs(t0, rho0, hmt, deco, hb, span, dt, dlt, rectify=True, verbose=True):
+# evolve functions with logs
+
+def evolve_with_logs(t0, v0, span, dlt, evolve_func, log_func=None, verbose=True):
     mt = t0 + span
     
     t = t0
-    rho = rho0
+    v = v0
     
-    lt = t
-    logs_t = [lt]
-    logs_rho = [rho]
+    if log_func is not None:
+        log_func(t, v)
+    if verbose:
+        print(f"\revolving...{(t - t0) / span:.2%}", end='')
     
-    while t < mt:
-        sp = np.maximum(np.minimum(lt + dlt, mt) - t, 0.0)
-        rho = evolve_lindblad(rho, hmt, deco, hb, dt, sp)
+    while True:
+        rt = mt - t
+        if rt < dlt:
+            break
         
+        v = evolve_func(t, v, dlt)
+        t += dlt
+        
+        if log_func is not None:
+            log_func(t, v)
+        if verbose:
+            print(f"\revolving...{(t - t0) / span:.2%}", end='')
+    
+    if rt > 0:
+        v = evolve_func(t, v, rt)
+        t = mt
+    
+    if log_func is not None:
+        log_func(t, v)
+    if verbose:
+        print(f"\revolving...{(t - t0) / span:.2%}")
+    
+    return t, v
+
+
+def evolve_schrodinger_with_logs(t0, psi0, hmt, hb, span, dt, dlt, log_func=None, rectify=True, verbose=True):
+    def evolve_func(t, psi, sp):
+        psi = evolve_schrodinger(psi, hmt, hb, dt, sp)
+        if rectify:
+            psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
+        psi = psi.transposed(psi0.dims)
+        return psi
+    
+    return evolve_with_logs(t0, psi0, span, dlt, evolve_func, log_func, verbose)
+
+
+def evolve_lindblad_with_logs(t0, rho0, hmt, deco, hb, span, dt, dlt, log_func=None, rectify=True, verbose=True):
+    def evolve_func(t, rho, sp):
+        rho = evolve_lindblad(rho, hmt, deco, hb, dt, sp)
         if rectify:
             rho /= rho.trace().values
-        
         rho = rho.transposed(rho0.dims)
-        
-        t += sp
-        lt = t
-        logs_t.append(t)
-        logs_rho.append(rho)
-        
-        if verbose:
-            print(f"\rcomputing...{(t - t0) / span:.2%}", end='')
+        return rho
     
-    if verbose:
-        print(f"\rcomputing...{1.0:.2%}")
-    
-    logs_t = np.asarray(logs_t)
-    try:
-        logs_rho = np.asarray(logs_rho)
-    except RuntimeError:
-        pass
-    
-    return t, rho, logs_t, logs_rho
+    return evolve_with_logs(t0, rho0, span, dlt, evolve_func, log_func, verbose)
