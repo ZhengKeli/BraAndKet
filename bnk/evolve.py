@@ -9,36 +9,36 @@ from bnk import QTensor
 def _raw_schrodinger_evolve(psi, hmt, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
-    
+
     hmt = hmt.broadcast(psi.dims)
-    
+
     # unwrap
     _, hmt = hmt.flatten()
     psi_dims, psi = psi.flatten()
     hmt = np.asarray(hmt, dtype=np.complex64)
     psi = np.asarray(psi, dtype=np.complex64)
-    
+
     # compute
     kt = (dt / 1j / hb)
     for i in range(n):
         psi += kt * (hmt @ psi)
-    
+
     # wrap
     psi = psi.reshape([dim.n for group in psi_dims for dim in group])
     psi = QTensor([dim for group in psi_dims for dim in group], np.copy(psi))
-    
+
     return psi
 
 
 def _raw_lindblad_evolve(rho, hmt, deco, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
-    
+
     all_dims = [*rho.dims, *hmt.dims, *deco.dims]
     hmt = hmt.broadcast(rho.dims)
     deco = deco.broadcast(all_dims)
     rho = rho.broadcast(all_dims)
-    
+
     # unwrap
     _, hmt = hmt.flatten()
     _, deco = deco.flatten()
@@ -46,7 +46,7 @@ def _raw_lindblad_evolve(rho, hmt, deco, hb, dt, mt):
     hmt = np.asarray(hmt, dtype=np.complex64)
     deco = np.asarray(deco, dtype=np.complex64)
     rho = np.asarray(rho, dtype=np.complex64)
-    
+
     # compute
     kt = (dt / 1j / hb)
     deco_ct = np.conj(np.transpose(deco))
@@ -59,18 +59,18 @@ def _raw_lindblad_evolve(rho, hmt, deco, hb, dt, mt):
                 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco)
             )
         )
-    
+
     # wrap
     rho = rho.reshape([dim.n for group in rho_dims for dim in group])
     rho = QTensor([dim for group in rho_dims for dim in group], np.copy(rho))
-    
+
     return rho
 
 
 def _raw_dynamic_schrodinger_evolve(psi, hmt_list, k_list_func, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
-    
+
     hmt_list = list(hmt_list)
     for i in range(len(hmt_list)):
         hmt = hmt_list[i]
@@ -79,37 +79,37 @@ def _raw_dynamic_schrodinger_evolve(psi, hmt_list, k_list_func, hb, dt, mt):
         hmt = np.asarray(hmt, dtype=np.complex64)
         hmt_list[i] = hmt
     hmt_list = np.stack(hmt_list, -1)
-    
+
     psi_dims, psi = psi.flatten()
     psi = np.asarray(psi, dtype=np.complex64)
-    
+
     # compute
     kt = (dt / 1j / hb)
     for i in range(n):
         k_list = np.asarray(k_list_func((i + 0.5) * dt))
         hmt = np.sum(hmt_list * k_list, -1)
         psi += kt * (hmt @ psi)
-    
+
     # wrap
     psi = psi.reshape([dim.n for group in psi_dims for dim in group])
     psi = QTensor([dim for group in psi_dims for dim in group], np.copy(psi))
-    
+
     return psi
 
 
 def _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, k_list_func, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
-    
+
     all_dims = []
     all_dims.extend(rho.dims)
     for hmt in hmt_list:
         all_dims.extend(hmt.dims)
     for deco in deco_list:
         all_dims.extend(deco.dims)
-    
+
     rho = rho.broadcast(all_dims)
-    
+
     hmt_list = list(hmt_list)
     for i in range(len(hmt_list)):
         hmt = hmt_list[i]
@@ -118,7 +118,7 @@ def _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, k_list_func, hb, dt, 
         hmt = np.asarray(hmt, dtype=np.complex64)
         hmt_list[i] = hmt
     hmt_list = np.stack(hmt_list, -1)
-    
+
     deco_list = list(deco_list)
     deco_ct_deco_list = []
     for i in range(len(deco_list)):
@@ -127,28 +127,28 @@ def _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, k_list_func, hb, dt, 
         _, deco = deco.flatten()
         deco = np.asarray(deco, dtype=np.complex64)
         deco_list[i] = deco
-        
+
         deco_ct = np.conj(np.transpose(deco))
         deco_ct_deco = deco_ct @ deco
         deco_ct_deco_list.append(deco_ct_deco)
     deco_list = np.stack(deco_list, -1)
     deco_ct_deco_list = np.stack(deco_ct_deco_list, -1)
-    
+
     rho_dims, rho = rho.flatten()
     rho = np.asarray(rho, dtype=np.complex64)
-    
+
     # compute
     kt = (dt / 1j / hb)
     for i in range(n):
         hmt_k_list, deco_k_list = k_list_func((i + 0.5) * dt)
         hmt_k_list = np.asarray(hmt_k_list)
         deco_k_list = np.asarray(deco_k_list)
-        
+
         hmt = np.sum(hmt_list * hmt_k_list, -1)
         deco = np.sum(deco_list * deco_k_list, -1)
         deco_ct = np.conj(np.transpose(deco))
         deco_ct_deco = np.sum(deco_ct_deco_list * (deco_k_list * deco_k_list), -1)
-        
+
         rho += kt * (
             hmt @ rho - rho @ hmt +
             1j * (
@@ -156,11 +156,11 @@ def _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, k_list_func, hb, dt, 
                 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco)
             )
         )
-    
+
     # wrap
     rho = rho.reshape([dim.n for group in rho_dims for dim in group])
     rho = QTensor([dim for group in rho_dims for dim in group], np.copy(rho))
-    
+
     return rho
 
 
@@ -185,7 +185,7 @@ def evolve(t0, v0, span, evolve_func,
         rt = mt - t
         if rt < dlt:
             break
-        
+
         v = evolve_func(t, v, dlt)
         t += dlt
 
