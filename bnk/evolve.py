@@ -5,7 +5,7 @@ from bnk import QTensor
 
 # accelerated evolve functions
 
-def evolve_schrodinger(psi, hmt, hb, dt, mt):
+def _raw_schrodinger_evolve(psi, hmt, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
     
@@ -29,7 +29,7 @@ def evolve_schrodinger(psi, hmt, hb, dt, mt):
     return psi
 
 
-def evolve_lindblad(rho, hmt, deco, hb, dt, mt):
+def _raw_lindblad_evolve(rho, hmt, deco, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
     
@@ -66,7 +66,7 @@ def evolve_lindblad(rho, hmt, deco, hb, dt, mt):
     return rho
 
 
-def evolve_dynamic_schrodinger(psi, hmt_list, k_list_func, hb, dt, mt):
+def _raw_dynamic_schrodinger_evolve(psi, hmt_list, k_list_func, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
     
@@ -96,7 +96,7 @@ def evolve_dynamic_schrodinger(psi, hmt_list, k_list_func, hb, dt, mt):
     return psi
 
 
-def evolve_dynamic_lindblad(rho, hmt_list, deco_list, k_list_func, hb, dt, mt):
+def _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, k_list_func, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
     
@@ -165,7 +165,10 @@ def evolve_dynamic_lindblad(rho, hmt_list, deco_list, k_list_func, hb, dt, mt):
 
 # evolve functions with logs
 
-def evolve_with_logs(t0, v0, span, dlt, evolve_func, log_func=None, verbose=True):
+def evolve(t0, v0, span, evolve_func,
+           dlt=None, log_func=None, verbose=True):
+    dlt = (span / 100) if dlt is None else dlt
+
     mt = t0 + span
     
     t = t0
@@ -201,32 +204,34 @@ def evolve_with_logs(t0, v0, span, dlt, evolve_func, log_func=None, verbose=True
     return t, v
 
 
-def evolve_schrodinger_with_logs(t0, psi0, hmt, hb, span, dt, dlt, log_func=None, rectify=True, verbose=True):
+def schrodinger_evolve(t0, psi0, hmt, hb, span, dt,
+                       dlt=None, log_func=None, rectify=True, verbose=True):
     def evolve_func(t, psi, sp):
-        psi = evolve_schrodinger(psi, hmt, hb, dt, sp)
+        psi = _raw_schrodinger_evolve(psi, hmt, hb, dt, sp)
         if rectify:
             psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
         psi = psi.transposed(psi0.dims)
         return psi
-    
-    return evolve_with_logs(t0, psi0, span, dlt, evolve_func, log_func, verbose)
+
+    return evolve(t0, psi0, span, evolve_func, dlt, log_func, verbose)
 
 
-def evolve_lindblad_with_logs(t0, rho0, hmt, deco, hb, span, dt, dlt, log_func=None, rectify=True, verbose=True):
+def lindblad_evolve(t0, rho0, hmt, deco, hb, span, dt,
+                    dlt=None, log_func=None, rectify=True, verbose=True):
     def evolve_func(t, rho, sp):
-        rho = evolve_lindblad(rho, hmt, deco, hb, dt, sp)
+        rho = _raw_lindblad_evolve(rho, hmt, deco, hb, dt, sp)
         if rectify:
             rho /= rho.trace().values
         rho = rho.transposed(rho0.dims)
         return rho
-    
-    return evolve_with_logs(t0, rho0, span, dlt, evolve_func, log_func, verbose)
+
+    return evolve(t0, rho0, span, evolve_func, dlt, log_func, verbose)
 
 
-def evolve_dynamic_schrodinger_with_logs(t0, psi0, hmt_list, k_list_func, hb, span, dt, dlt,
-                                         log_func=None, rectify=True, verbose=True):
+def dynamic_schrodinger_evolve(t0, psi0, hmt_list, k_list_func, hb, span, dt,
+                               dlt=None, log_func=None, rectify=True, verbose=True):
     def evolve_func(t, psi, sp):
-        psi = evolve_dynamic_schrodinger(psi, hmt_list, lambda ti: k_list_func(ti + t), hb, dt, sp)
+        psi = _raw_dynamic_schrodinger_evolve(psi, hmt_list, lambda ti: k_list_func(ti + t), hb, dt, sp)
         if rectify:
             psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
         psi = psi.transposed(psi0.dims)
@@ -235,13 +240,13 @@ def evolve_dynamic_schrodinger_with_logs(t0, psi0, hmt_list, k_list_func, hb, sp
     return evolve_with_logs(t0, psi0, span, dlt, evolve_func, log_func, verbose)
 
 
-def evolve_dynamic_lindblad_with_logs(t0, rho0, hmt_list, deco_list, k_list_func, hb, span, dt, dlt,
-                                      log_func=None, rectify=True, verbose=True):
+def dynamic_lindblad_evolve(t0, rho0, hmt_list, deco_list, k_list_func, hb, span, dt,
+                            dlt=None, log_func=None, rectify=True, verbose=True):
     def evolve_func(t, rho, sp):
-        rho = evolve_dynamic_lindblad(rho, hmt_list, deco_list, lambda ti: k_list_func(ti + t), hb, dt, sp)
+        rho = _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, lambda ti: k_list_func(ti + t), hb, dt, sp)
         if rectify:
             rho /= np.real(rho.trace().values)
         rho = rho.transposed(rho0.dims)
         return rho
-    
-    return evolve_with_logs(t0, rho0, span, dlt, evolve_func, log_func, verbose)
+
+    return evolve(t0, rho0, span, evolve_func, dlt, log_func, verbose)
