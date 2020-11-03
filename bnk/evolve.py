@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 from bnk import QTensor
 
@@ -170,15 +171,16 @@ def evolve(t0, v0, span, evolve_func,
     dlt = (span / 100) if dlt is None else dlt
 
     mt = t0 + span
-    
+    progress = None
+
     t = t0
     v = v0
-    
-    if log_func is not None:
+
+    if log_func:
         log_func(t, v)
     if verbose:
-        print(f"\revolving...{(t - t0) / span:.2%}", end='')
-    
+        progress = tqdm(total=span)
+
     while True:
         rt = mt - t
         if rt < dlt:
@@ -186,21 +188,21 @@ def evolve(t0, v0, span, evolve_func,
         
         v = evolve_func(t, v, dlt)
         t += dlt
-        
-        if log_func is not None:
+
+        if log_func:
             log_func(t, v)
         if verbose:
-            print(f"\revolving...{(t - t0) / span:.2%}", end='')
-    
+            progress.update(dlt)
+
     if rt > 0:
         v = evolve_func(t, v, rt)
         t = mt
-    
-    if log_func is not None:
-        log_func(t, v)
-    if verbose:
-        print(f"\revolving...{(t - t0) / span:.2%}")
-    
+
+        if log_func:
+            log_func(t, v)
+        if verbose:
+            progress.update(rt)
+
     return t, v
 
 
