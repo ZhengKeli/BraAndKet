@@ -236,8 +236,8 @@ def dynamic_schrodinger_evolve(t0, psi0, hmt_list, k_list_func, hb, span, dt,
             psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
         psi = psi.transposed(psi0.dims)
         return psi
-    
-    return evolve_with_logs(t0, psi0, span, dlt, evolve_func, log_func, verbose)
+
+    return evolve(t0, psi0, span, evolve_func, dlt, log_func, verbose)
 
 
 def dynamic_lindblad_evolve(t0, rho0, hmt_list, deco_list, k_list_func, hb, span, dt,
