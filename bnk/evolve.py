@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 
-from bnk import QTensor
+from bnk.tensor import QTensor
 
 
 # accelerated evolve functions
