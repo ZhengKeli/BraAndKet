@@ -30,35 +30,47 @@ def _raw_schrodinger_evolve(psi, hmt, hb, dt, mt):
     return psi
 
 
-def _raw_lindblad_evolve(rho, hmt, deco, hb, dt, mt):
+def _raw_lindblad_evolve(rho, hmt, deco, gamma, hb, dt, mt):
+    deco_list = [deco] if isinstance(deco, QTensor) else list(deco)
+    gamma_list = np.broadcast_to(gamma, [len(deco_list)])
+
     n = int(np.ceil(mt / dt))
     dt = mt / n
 
-    all_dims = [*rho.dims, *hmt.dims, *deco.dims]
-    hmt = hmt.broadcast(rho.dims)
-    deco = deco.broadcast(all_dims)
+    # broadcast
+    all_dims = [
+        *rho.dims,
+        *hmt.dims,
+        *[dim for deco in deco_list for dim in deco.dims]
+    ]
     rho = rho.broadcast(all_dims)
+    hmt = hmt.broadcast(all_dims)
+    deco_list = [deco.broadcast(all_dims) for deco in deco_list]
 
     # unwrap
-    _, hmt = hmt.flatten()
-    _, deco = deco.flatten()
     rho_dims, rho = rho.flatten()
-    hmt = np.asarray(hmt, dtype=np.complex64)
-    deco = np.asarray(deco, dtype=np.complex64)
     rho = np.asarray(rho, dtype=np.complex64)
 
+    hmt = hmt.flatten()[1]
+    hmt = np.asarray(hmt, dtype=np.complex64)
+
+    deco_list = [deco.flatten()[1] for deco in deco_list]
+    deco_list = [np.asarray(deco, dtype=np.complex64) for deco in deco_list]
+    deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
+    deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
+
     # compute
-    kt = (dt / 1j / hb)
-    deco_ct = np.conj(np.transpose(deco))
-    deco_ct_deco = np.dot(deco_ct, deco)
+    k_sh = - 1j / hb
     for i in range(n):
-        rho += kt * (
-            hmt @ rho - rho @ hmt +
-            1j * (
-                deco @ rho @ deco_ct -
-                0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco)
-            )
+        sh_part = hmt @ rho - rho @ hmt
+
+        ln_part = sum(
+            gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
+            for gamma, deco, deco_ct, deco_ct_deco
+            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list)
         )
+
+        rho += dt * (k_sh * sh_part + ln_part)
 
     # wrap
     rho = rho.reshape([dim.n for group in rho_dims for dim in group])
@@ -97,65 +109,51 @@ def _raw_dynamic_schrodinger_evolve(psi, hmt_list, k_list_func, hb, dt, mt):
     return psi
 
 
-def _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, k_list_func, hb, dt, mt):
+def _raw_dynamic_lindblad_evolve(rho, hmt_list, k_list_func, deco_list, gamma_list_func, hb, dt, mt):
     n = int(np.ceil(mt / dt))
     dt = mt / n
 
-    all_dims = []
-    all_dims.extend(rho.dims)
-    for hmt in hmt_list:
-        all_dims.extend(hmt.dims)
-    for deco in deco_list:
-        all_dims.extend(deco.dims)
-
+    # broadcast
+    all_dims = [
+        *rho.dims,
+        *[dim for hmt in hmt_list for dim in hmt.dims],
+        *[dim for deco in deco_list for dim in deco.dims]
+    ]
     rho = rho.broadcast(all_dims)
+    hmt_list = [hmt.broadcast(all_dims) for hmt in hmt_list]
+    deco_list = [deco.broadcast(all_dims) for deco in deco_list]
 
-    hmt_list = list(hmt_list)
-    for i in range(len(hmt_list)):
-        hmt = hmt_list[i]
-        hmt = hmt.broadcast(rho.dims)
-        _, hmt = hmt.flatten()
-        hmt = np.asarray(hmt, dtype=np.complex64)
-        hmt_list[i] = hmt
-    hmt_list = np.stack(hmt_list, -1)
-
-    deco_list = list(deco_list)
-    deco_ct_deco_list = []
-    for i in range(len(deco_list)):
-        deco = deco_list[i]
-        deco = deco.broadcast(rho.dims)
-        _, deco = deco.flatten()
-        deco = np.asarray(deco, dtype=np.complex64)
-        deco_list[i] = deco
-
-        deco_ct = np.conj(np.transpose(deco))
-        deco_ct_deco = deco_ct @ deco
-        deco_ct_deco_list.append(deco_ct_deco)
-    deco_list = np.stack(deco_list, -1)
-    deco_ct_deco_list = np.stack(deco_ct_deco_list, -1)
-
+    # unwrap
     rho_dims, rho = rho.flatten()
     rho = np.asarray(rho, dtype=np.complex64)
 
+    hmt_list = [hmt.flatten()[1] for hmt in hmt_list]
+    hmt_list = [np.asarray(hmt, dtype=np.complex64) for hmt in hmt_list]
+
+    deco_list = [deco.flatten()[1] for deco in deco_list]
+    deco_list = [np.asarray(deco, dtype=np.complex64) for deco in deco_list]
+    deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
+    deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
+
     # compute
-    kt = (dt / 1j / hb)
+    hmt_list = np.stack(hmt_list, -1)
+    k_sh = - 1j / hb
     for i in range(n):
-        hmt_k_list, deco_k_list = k_list_func((i + 0.5) * dt)
-        hmt_k_list = np.asarray(hmt_k_list)
-        deco_k_list = np.asarray(deco_k_list)
+        t = (i + 0.5) * dt
 
-        hmt = np.sum(hmt_list * hmt_k_list, -1)
-        deco = np.sum(deco_list * deco_k_list, -1)
-        deco_ct = np.conj(np.transpose(deco))
-        deco_ct_deco = np.sum(deco_ct_deco_list * (deco_k_list * deco_k_list), -1)
+        k_list = k_list_func(t)
+        k_list = np.asarray(k_list)
+        hmt = np.sum(hmt_list * k_list, -1)
+        sh_part = hmt @ rho - rho @ hmt
 
-        rho += kt * (
-            hmt @ rho - rho @ hmt +
-            1j * (
-                deco @ rho @ deco_ct -
-                0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco)
-            )
+        gamma_list = gamma_list_func(t)
+        ln_part = sum(
+            gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
+            for gamma, deco, deco_ct, deco_ct_deco
+            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list)
         )
+
+        rho += dt * (k_sh * sh_part + ln_part)
 
     # wrap
     rho = rho.reshape([dim.n for group in rho_dims for dim in group])
@@ -218,10 +216,10 @@ def schrodinger_evolve(t0, psi0, hmt, hb, span, dt,
     return evolve(t0, psi0, span, evolve_func, dlt, log_func, verbose)
 
 
-def lindblad_evolve(t0, rho0, hmt, deco, hb, span, dt,
+def lindblad_evolve(t0, rho0, hmt, deco, gamma, hb, span, dt,
                     dlt=None, log_func=None, rectify=True, verbose=True):
     def evolve_func(t, rho, sp):
-        rho = _raw_lindblad_evolve(rho, hmt, deco, hb, dt, sp)
+        rho = _raw_lindblad_evolve(rho, hmt, deco, gamma, hb, dt, sp)
         if rectify:
             rho /= rho.trace().values
         rho = rho.transposed(rho0.dims)
@@ -242,10 +240,14 @@ def dynamic_schrodinger_evolve(t0, psi0, hmt_list, k_list_func, hb, span, dt,
     return evolve(t0, psi0, span, evolve_func, dlt, log_func, verbose)
 
 
-def dynamic_lindblad_evolve(t0, rho0, hmt_list, deco_list, k_list_func, hb, span, dt,
+def dynamic_lindblad_evolve(t0, rho0, hmt_list, k_list_func, deco_list, gamma_list_func, hb, span, dt,
                             dlt=None, log_func=None, rectify=True, verbose=True):
     def evolve_func(t, rho, sp):
-        rho = _raw_dynamic_lindblad_evolve(rho, hmt_list, deco_list, lambda ti: k_list_func(ti + t), hb, dt, sp)
+        rho = _raw_dynamic_lindblad_evolve(
+            rho,
+            hmt_list, lambda ti: k_list_func(ti + t),
+            deco_list, lambda ti: gamma_list_func(ti + t),
+            hb, dt, sp)
         if rectify:
             rho /= np.real(rho.trace().values)
         rho = rho.transposed(rho0.dims)
