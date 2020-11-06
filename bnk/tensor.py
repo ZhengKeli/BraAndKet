@@ -109,6 +109,9 @@ class QDimension:
                other.space == self.space and \
                other.typ == self.typ
 
+    def __hash__(self):
+        return hash((self.typ, self.space))
+
     def __repr__(self):
         return f"<Dimension: typ={self.typ}, n={self.n}, name={self.name}>"
 

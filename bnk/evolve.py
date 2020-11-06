@@ -38,11 +38,11 @@ def _raw_lindblad_evolve(rho, hmt, deco, gamma, hb, dt, mt):
     dt = mt / n
 
     # broadcast
-    all_dims = [
+    all_dims = {
         *rho.dims,
         *hmt.dims,
-        *[dim for deco in deco_list for dim in deco.dims]
-    ]
+        *(dim for deco in deco_list for dim in deco.dims)
+    }
     rho = rho.broadcast(all_dims)
     hmt = hmt.broadcast(all_dims)
     deco_list = [deco.broadcast(all_dims) for deco in deco_list]
@@ -114,11 +114,11 @@ def _raw_dynamic_lindblad_evolve(rho, hmt_list, k_list_func, deco_list, gamma_li
     dt = mt / n
 
     # broadcast
-    all_dims = [
+    all_dims = {
         *rho.dims,
-        *[dim for hmt in hmt_list for dim in hmt.dims],
-        *[dim for deco in deco_list for dim in deco.dims]
-    ]
+        *(dim for hmt in hmt_list for dim in hmt.dims),
+        *(dim for deco in deco_list for dim in deco.dims)
+    }
     rho = rho.broadcast(all_dims)
     hmt_list = [hmt.broadcast(all_dims) for hmt in hmt_list]
     deco_list = [deco.broadcast(all_dims) for deco in deco_list]
