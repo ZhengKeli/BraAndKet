@@ -208,6 +208,21 @@ class QTensor:
 
         return traced
 
+    @staticmethod
+    def wrap(flattened_dims, flattened_values, dims=None, copy=True):
+        wrapped_dims = [dim for group in flattened_dims for dim in group]
+        wrapped_shape = [dim.n for dim in wrapped_dims]
+        wrapped_values = np.reshape(flattened_values, wrapped_shape)
+
+        if copy:
+            wrapped_values = np.copy(wrapped_values)
+
+        tensor = QTensor(wrapped_dims, wrapped_values)
+        if dims:
+            tensor = tensor.transposed(dims)
+
+        return tensor
+
     def flatten(self):
         oth_dims = []
         ket_dims = []
@@ -229,16 +244,16 @@ class QTensor:
         flattened_bra_dim = np.prod([dim.n for dim in bra_dims], dtype=int)
 
         if flattened_oth_dim == 1:
-            corr_dims = ket_dims, bra_dims
+            flattened_dims = ket_dims, bra_dims
             flattened_shape = [flattened_ket_dim, flattened_bra_dim]
         else:
-            corr_dims = oth_dims, ket_dims, bra_dims
+            flattened_dims = oth_dims, ket_dims, bra_dims
             flattened_shape = [flattened_oth_dim, flattened_ket_dim, flattened_bra_dim]
 
         transposed = self.transposed([*oth_dims, *ket_dims, *bra_dims])
         flattened_values = np.reshape(transposed.values, flattened_shape)
 
-        return corr_dims, flattened_values
+        return flattened_dims, flattened_values
 
     @property
     def flattened_values(self):
