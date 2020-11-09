@@ -4,38 +4,51 @@ from tqdm import tqdm
 from bnk.tensor import QTensor
 
 
-# accelerated evolve functions
+# schrodinger
 
-def _raw_schrodinger_evolve(psi, hmt, hb, dt, mt):
-    n = int(np.ceil(mt / dt))
-    dt = mt / n
+def schrodinger_evolve(t, psi, hmt, hb, span, dt,
+                       dlt=None, log_func=None, rectify=True, verbose=True):
+    hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
 
+    # broadcast
     hmt = hmt.broadcast(psi.dims)
 
-    # unwrap
-    _, hmt = hmt.flatten()
-    psi_dims, psi = psi.flatten()
-    hmt = np.asarray(hmt, dtype=np.complex64)
-    psi = np.asarray(psi, dtype=np.complex64)
+    # flatten
+    dims = psi.dims
+    flat_dims, psi = psi.flatten()
+    psi = np.asarray(psi, np.complex64)
+
+    hmt = hmt.flattened_values
+    hmt = np.asarray(hmt, np.complex64)
 
     # compute
-    kt = (dt / 1j / hb)
-    for i in range(n):
-        psi += kt * (hmt @ psi)
+    def _evolve_func(_, psi, sp):
+        n = int(np.ceil(sp / dt))
+        fdt = sp / n
+
+        kt = (fdt / 1j / hb)
+        for i in range(n):
+            psi += kt * (hmt @ psi)
+
+        if rectify:
+            psi /= np.sqrt(np.sum(np.conj(psi) * psi))
+        return psi
+
+    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
+
+    t, psi = _evolve_with_logs(t, psi, span, _evolve_func, dlt, _log_func, verbose)
 
     # wrap
-    psi = psi.reshape([dim.n for group in psi_dims for dim in group])
-    psi = QTensor([dim for group in psi_dims for dim in group], np.copy(psi))
+    psi = QTensor.wrap(flat_dims, psi, dims)
 
-    return psi
+    return t, psi
 
 
-def _raw_lindblad_evolve(rho, hmt, deco, gamma, hb, dt, mt):
+def lindblad_evolve(t, rho, hmt, deco, gamma, hb, span, dt,
+                    dlt=None, log_func=None, rectify=True, verbose=True):
+    hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
     deco_list = [deco] if isinstance(deco, QTensor) else list(deco)
-    gamma_list = np.broadcast_to(gamma, [len(deco_list)])
-
-    n = int(np.ceil(mt / dt))
-    dt = mt / n
+    gamma_list = np.reshape(gamma, [len(deco_list)])
 
     # broadcast
     all_dims = {
@@ -48,70 +61,101 @@ def _raw_lindblad_evolve(rho, hmt, deco, gamma, hb, dt, mt):
     deco_list = [deco.broadcast(all_dims) for deco in deco_list]
 
     # unwrap
-    rho_dims, rho = rho.flatten()
+    dims = rho.dims
+    flat_dims, rho = rho.flatten()
     rho = np.asarray(rho, dtype=np.complex64)
 
-    hmt = hmt.flatten()[1]
+    hmt = hmt.flattened_values
     hmt = np.asarray(hmt, dtype=np.complex64)
 
-    deco_list = [deco.flatten()[1] for deco in deco_list]
+    deco_list = [deco.flattened_values for deco in deco_list]
     deco_list = [np.asarray(deco, dtype=np.complex64) for deco in deco_list]
+
     deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
     deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
 
     # compute
-    k_sh = - 1j / hb
-    for i in range(n):
-        sh_part = hmt @ rho - rho @ hmt
+    def evolve_func(_, rho, sp):
+        n = int(np.ceil(sp / dt))
+        fdt = sp / n
 
-        ln_part = sum(
-            gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
-            for gamma, deco, deco_ct, deco_ct_deco
-            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list)
-        )
+        k_sh = - 1j / hb
+        for i in range(n):
+            sh_part = hmt @ rho - rho @ hmt
 
-        rho += dt * (k_sh * sh_part + ln_part)
+            ln_part = sum(
+                gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
+                for gamma, deco, deco_ct, deco_ct_deco
+                in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list))
+
+            rho += fdt * (k_sh * sh_part + ln_part)
+
+        if rectify:
+            rho /= np.trace(rho, axis1=-2, axis2=-1)
+        return rho
+
+    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
+
+    t, rho = _evolve_with_logs(t, rho, span, evolve_func, dlt, _log_func, verbose)
 
     # wrap
-    rho = rho.reshape([dim.n for group in rho_dims for dim in group])
-    rho = QTensor([dim for group in rho_dims for dim in group], np.copy(rho))
+    rho = QTensor.wrap(flat_dims, rho, dims)
 
-    return rho
+    return t, rho
 
 
-def _raw_dynamic_schrodinger_evolve(psi, hmt_list, k_list_func, hb, dt, mt):
-    n = int(np.ceil(mt / dt))
-    dt = mt / n
+def dynamic_schrodinger_evolve(t, psi, hmt, k_func, hb, span, dt,
+                               dlt=None, log_func=None, rectify=True, verbose=True):
+    hmt_list = [hmt] if isinstance(hmt, QTensor) else list(hmt)
+    hmt_count = len(hmt_list)
 
-    hmt_list = list(hmt_list)
-    for i in range(len(hmt_list)):
-        hmt = hmt_list[i]
-        hmt = hmt.broadcast(psi.dims)
-        _, hmt = hmt.flatten()
-        hmt = np.asarray(hmt, dtype=np.complex64)
-        hmt_list[i] = hmt
-    hmt_list = np.stack(hmt_list, -1)
+    # broadcast
+    hmt_list = [hmt.broadcast(psi.dims) for hmt in hmt_list]
 
-    psi_dims, psi = psi.flatten()
+    # unwrap
+    dims = psi.dims
+    flat_dims, psi = psi.flatten()
     psi = np.asarray(psi, dtype=np.complex64)
 
+    hmt_list = [hmt.flattened_values for hmt in hmt_list]
+    hmt_list = [np.asarray(hmt, dtype=np.complex64) for hmt in hmt_list]
+
+    hmt_list = np.stack(hmt_list, -1)
+
     # compute
-    kt = (dt / 1j / hb)
-    for i in range(n):
-        k_list = np.asarray(k_list_func((i + 0.5) * dt))
-        hmt = np.sum(hmt_list * k_list, -1)
-        psi += kt * (hmt @ psi)
+    def _evolve_func(t, psi, sp):
+        n = int(np.ceil(sp / dt))
+        fdt = sp / n
+
+        kt = (fdt / 1j / hb)
+        for i in range(n):
+            ti = t + i * fdt
+
+            k_list = np.reshape(k_func(ti), [hmt_count])
+            hmt = np.sum(hmt_list * k_list, -1)
+
+            psi += kt * (hmt @ psi)
+
+        if rectify:
+            psi /= np.sqrt(np.sum(np.conj(psi) * psi))
+        return psi
+
+    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
+
+    t, psi = _evolve_with_logs(t, psi, span, _evolve_func, dlt, _log_func, verbose)
 
     # wrap
-    psi = psi.reshape([dim.n for group in psi_dims for dim in group])
-    psi = QTensor([dim for group in psi_dims for dim in group], np.copy(psi))
+    psi = QTensor.wrap(flat_dims, psi, dims)
 
-    return psi
+    return t, psi
 
 
-def _raw_dynamic_lindblad_evolve(rho, hmt_list, k_list_func, deco_list, gamma_list_func, hb, dt, mt):
-    n = int(np.ceil(mt / dt))
-    dt = mt / n
+def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
+                            dlt=None, log_func=None, rectify=True, verbose=True):
+    hmt_list = [hmt] if isinstance(hmt, QTensor) else list(hmt)
+    deco_list = [deco] if isinstance(deco, QTensor) else list(deco)
+    hmt_count = len(hmt_list)
+    deco_count = len(deco_list)
 
     # broadcast
     all_dims = {
@@ -124,48 +168,69 @@ def _raw_dynamic_lindblad_evolve(rho, hmt_list, k_list_func, deco_list, gamma_li
     deco_list = [deco.broadcast(all_dims) for deco in deco_list]
 
     # unwrap
-    rho_dims, rho = rho.flatten()
+    dims = rho.dims
+    flat_dims, rho = rho.flatten()
     rho = np.asarray(rho, dtype=np.complex64)
 
-    hmt_list = [hmt.flatten()[1] for hmt in hmt_list]
+    hmt_list = [hmt.flattened_values for hmt in hmt_list]
     hmt_list = [np.asarray(hmt, dtype=np.complex64) for hmt in hmt_list]
+    hmt_list = np.stack(hmt_list, -1)
 
-    deco_list = [deco.flatten()[1] for deco in deco_list]
+    deco_list = [deco.flattened_values for deco in deco_list]
     deco_list = [np.asarray(deco, dtype=np.complex64) for deco in deco_list]
     deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
     deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
 
     # compute
-    hmt_list = np.stack(hmt_list, -1)
-    k_sh = - 1j / hb
-    for i in range(n):
-        t = (i + 0.5) * dt
+    def _evolve_func(t, rho, sp):
+        n = int(np.ceil(sp / dt))
+        fdt = sp / n
 
-        k_list = k_list_func(t)
-        k_list = np.asarray(k_list)
-        hmt = np.sum(hmt_list * k_list, -1)
-        sh_part = hmt @ rho - rho @ hmt
+        k_sh = - 1j / hb
+        for i in range(n):
+            ti = t + i * fdt
 
-        gamma_list = gamma_list_func(t)
-        ln_part = sum(
-            gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
-            for gamma, deco, deco_ct, deco_ct_deco
-            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list)
-        )
+            k_list = np.reshape(k_func(ti), [hmt_count])
+            hmt = np.sum(hmt_list * k_list, -1)
+            sh_part = hmt @ rho - rho @ hmt
 
-        rho += dt * (k_sh * sh_part + ln_part)
+            gamma_list = np.reshape(gamma_func(ti), [deco_count])
+            ln_part = sum(
+                gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
+                for gamma, deco, deco_ct, deco_ct_deco
+                in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list))
+
+            rho += fdt * (k_sh * sh_part + ln_part)
+
+        if rectify:
+            rho /= np.trace(rho, axis1=-2, axis2=-1)
+        return rho
+
+    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
+
+    t, rho = _evolve_with_logs(t, rho, span, _evolve_func, dlt, _log_func, verbose)
 
     # wrap
-    rho = rho.reshape([dim.n for group in rho_dims for dim in group])
-    rho = QTensor([dim for group in rho_dims for dim in group], np.copy(rho))
+    rho = QTensor.wrap(flat_dims, rho, dims)
 
-    return rho
+    return t, rho
 
 
-# evolve functions with logs
+# utils
 
-def evolve(t0, v0, span, evolve_func,
-           dlt=None, log_func=None, verbose=True):
+
+def _get_wrap_log_func(dims, flat_dims, log_func):
+    if log_func is None:
+        return None
+
+    def _wrap_log_func(t_log, psi_log):
+        return log_func(t_log, QTensor.wrap(flat_dims, psi_log, dims))
+
+    return _wrap_log_func
+
+
+def _evolve_with_logs(t0, v0, span, evolve_func,
+                      dlt=None, log_func=None, verbose=True):
     dlt = (span / 100) if dlt is None else dlt
 
     mt = t0 + span
@@ -202,55 +267,3 @@ def evolve(t0, v0, span, evolve_func,
             progress.update(rt)
 
     return t, v
-
-
-def schrodinger_evolve(t0, psi0, hmt, hb, span, dt,
-                       dlt=None, log_func=None, rectify=True, verbose=True):
-    def evolve_func(t, psi, sp):
-        psi = _raw_schrodinger_evolve(psi, hmt, hb, dt, sp)
-        if rectify:
-            psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
-        psi = psi.transposed(psi0.dims)
-        return psi
-
-    return evolve(t0, psi0, span, evolve_func, dlt, log_func, verbose)
-
-
-def lindblad_evolve(t0, rho0, hmt, deco, gamma, hb, span, dt,
-                    dlt=None, log_func=None, rectify=True, verbose=True):
-    def evolve_func(t, rho, sp):
-        rho = _raw_lindblad_evolve(rho, hmt, deco, gamma, hb, dt, sp)
-        if rectify:
-            rho /= rho.trace().values
-        rho = rho.transposed(rho0.dims)
-        return rho
-
-    return evolve(t0, rho0, span, evolve_func, dlt, log_func, verbose)
-
-
-def dynamic_schrodinger_evolve(t0, psi0, hmt_list, k_list_func, hb, span, dt,
-                               dlt=None, log_func=None, rectify=True, verbose=True):
-    def evolve_func(t, psi, sp):
-        psi = _raw_dynamic_schrodinger_evolve(psi, hmt_list, lambda ti: k_list_func(ti + t), hb, dt, sp)
-        if rectify:
-            psi /= np.sqrt(np.sum(np.conj(psi.values) * psi.values))
-        psi = psi.transposed(psi0.dims)
-        return psi
-
-    return evolve(t0, psi0, span, evolve_func, dlt, log_func, verbose)
-
-
-def dynamic_lindblad_evolve(t0, rho0, hmt_list, k_list_func, deco_list, gamma_list_func, hb, span, dt,
-                            dlt=None, log_func=None, rectify=True, verbose=True):
-    def evolve_func(t, rho, sp):
-        rho = _raw_dynamic_lindblad_evolve(
-            rho,
-            hmt_list, lambda ti: k_list_func(ti + t),
-            deco_list, lambda ti: gamma_list_func(ti + t),
-            hb, dt, sp)
-        if rectify:
-            rho /= np.real(rho.trace().values)
-        rho = rho.transposed(rho0.dims)
-        return rho
-
-    return evolve(t0, rho0, span, evolve_func, dlt, log_func, verbose)
