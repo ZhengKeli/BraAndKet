@@ -22,21 +22,17 @@ def schrodinger_evolve(t, psi, hmt, hb, span, dt,
     hmt = np.asarray(hmt, np.complex64)
 
     # compute
-    def _evolve_func(_, psi, sp):
-        n = int(np.ceil(sp / dt))
-        fdt = sp / n
+    def steps_evolve_func(_, psi, n, dt):
+        return schrodinger_evolve_kernel(psi, hmt, hb, dt, n)
 
-        kt = (fdt / 1j / hb)
-        for i in range(n):
-            psi += kt * (hmt @ psi)
+    evolve_func = get_tiling_steps_evolve_func(dt, steps_evolve_func)
 
-        if rectify:
-            psi /= np.sqrt(np.sum(np.conj(psi) * psi))
-        return psi
+    if rectify:
+        evolve_func = get_rectifying_psi_evolve_func(evolve_func)
 
-    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
+    log_func = get_wrapping_log_func(dims, flat_dims, log_func)
 
-    t, psi = _evolve_with_logs(t, psi, span, _evolve_func, dlt, _log_func, verbose)
+    t, psi = evolve_with_logs(t, psi, span, evolve_func, dlt, log_func, verbose)
 
     # wrap
     psi = QTensor.wrap(flat_dims, psi, dims)
@@ -75,28 +71,18 @@ def lindblad_evolve(t, rho, hmt, deco, gamma, hb, span, dt,
     deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
 
     # compute
-    def evolve_func(_, rho, sp):
-        n = int(np.ceil(sp / dt))
-        fdt = sp / n
+    def steps_evolve_func(_, rho, n, dt):
+        return lindblad_evolve_kernel(
+            rho, hmt, gamma_list, deco_list, deco_ct_list, deco_ct_deco_list, hb, dt, n)
 
-        k_sh = - 1j / hb
-        for i in range(n):
-            sh_part = hmt @ rho - rho @ hmt
+    evolve_func = get_tiling_steps_evolve_func(dt, steps_evolve_func)
 
-            ln_part = sum(
-                gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
-                for gamma, deco, deco_ct, deco_ct_deco
-                in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list))
+    if rectify:
+        evolve_func = get_rectifying_rho_evolve_func(evolve_func)
 
-            rho += fdt * (k_sh * sh_part + ln_part)
+    log_func = get_wrapping_log_func(dims, flat_dims, log_func)
 
-        if rectify:
-            rho /= np.trace(rho, axis1=-2, axis2=-1)
-        return rho
-
-    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
-
-    t, rho = _evolve_with_logs(t, rho, span, evolve_func, dlt, _log_func, verbose)
+    t, rho = evolve_with_logs(t, rho, span, evolve_func, dlt, log_func, verbose)
 
     # wrap
     rho = QTensor.wrap(flat_dims, rho, dims)
@@ -140,9 +126,9 @@ def dynamic_schrodinger_evolve(t, psi, hmt, k_func, hb, span, dt,
             psi /= np.sqrt(np.sum(np.conj(psi) * psi))
         return psi
 
-    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
+    _log_func = get_wrapping_log_func(dims, flat_dims, log_func)
 
-    t, psi = _evolve_with_logs(t, psi, span, _evolve_func, dlt, _log_func, verbose)
+    t, psi = evolve_with_logs(t, psi, span, _evolve_func, dlt, _log_func, verbose)
 
     # wrap
     psi = QTensor.wrap(flat_dims, psi, dims)
@@ -206,9 +192,9 @@ def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
             rho /= np.trace(rho, axis1=-2, axis2=-1)
         return rho
 
-    _log_func = _get_wrap_log_func(dims, flat_dims, log_func)
+    _log_func = get_wrapping_log_func(dims, flat_dims, log_func)
 
-    t, rho = _evolve_with_logs(t, rho, span, _evolve_func, dlt, _log_func, verbose)
+    t, rho = evolve_with_logs(t, rho, span, _evolve_func, dlt, _log_func, verbose)
 
     # wrap
     rho = QTensor.wrap(flat_dims, rho, dims)
@@ -216,28 +202,40 @@ def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
     return t, rho
 
 
+# kernels
+
+def schrodinger_evolve_kernel(psi: np.ndarray, hmt: np.ndarray, hb, dt, n):
+    kt = (dt / 1j / hb)
+    for i in range(n):
+        psi += kt * (hmt @ psi)
+    return psi
+
+
+def lindblad_evolve_kernel(
+        rho: np.ndarray, hmt: np.ndarray,
+        gamma_list, deco_list, deco_ct_list, deco_ct_deco_list,
+        hb, dt, n):
+    k_sh = - 1j / hb
+    for i in range(n):
+        sh_part = hmt @ rho - rho @ hmt
+
+        ln_part = sum(
+            gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
+            for gamma, deco, deco_ct, deco_ct_deco
+            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list))
+
+        rho += dt * (k_sh * sh_part + ln_part)
+    return rho
+
+
 # utils
 
-
-def _get_wrap_log_func(dims, flat_dims, log_func):
-    if log_func is None:
-        return None
-
-    def _wrap_log_func(t_log, psi_log):
-        return log_func(t_log, QTensor.wrap(flat_dims, psi_log, dims))
-
-    return _wrap_log_func
-
-
-def _evolve_with_logs(t0, v0, span, evolve_func,
-                      dlt=None, log_func=None, verbose=True):
+def evolve_with_logs(t, v, span, evolve_func,
+                     dlt=None, log_func=None, verbose=True):
     dlt = (span / 100) if dlt is None else dlt
 
-    mt = t0 + span
+    mt = t + span
     progress = None
-
-    t = t0
-    v = v0
 
     if log_func:
         log_func(t, v)
@@ -267,3 +265,50 @@ def _evolve_with_logs(t0, v0, span, evolve_func,
             progress.update(rt)
 
     return t, v
+
+
+def get_wrapping_log_func(dims, flat_dims, log_func):
+    if log_func is None:
+        return None
+
+    def _wrapping_log_func(t_log, psi_log):
+        return log_func(t_log, QTensor.wrap(flat_dims, psi_log, dims))
+
+    return _wrapping_log_func
+
+
+def get_tiling_steps_evolve_func(dt, steps_evolve_func):
+    def _tiling_evolve_func(t, v, span):
+        tiled_n = int(np.ceil(span / dt))
+        tiled_dt = span / tiled_n
+        return steps_evolve_func(t, v, tiled_n, tiled_dt)
+
+    return _tiling_evolve_func
+
+
+def get_rectifying_psi_evolve_func(evolve_func):
+    def _rectifying_evolve_func(t, psi, span):
+        psi = evolve_func(t, psi, span)
+        psi = rectify_psi(psi)
+        return psi
+
+    return _rectifying_evolve_func
+
+
+def get_rectifying_rho_evolve_func(evolve_func):
+    def _rectifying_evolve_func(t, rho, span):
+        rho = evolve_func(t, rho, span)
+        rho = rectify_rho(rho)
+        return rho
+
+    return _rectifying_evolve_func
+
+
+def rectify_psi(psi):
+    psi /= np.sqrt(np.sum(np.conj(psi) * psi))
+    return psi
+
+
+def rectify_rho(rho):
+    rho /= np.trace(rho, axis1=-2, axis2=-1)
+    return rho
