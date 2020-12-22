@@ -128,6 +128,11 @@ def OtherDimension(space: HSpace):
     return QDimension(DimensionType.Other, space)
 
 
+BraDim = BraDimension
+KetDim = KetDimension
+OtherDim = OtherDimension
+
+
 # tensor
 
 class QTensor:
@@ -401,3 +406,8 @@ def Operator(spaces: Iterable[HSpace], values):
     ket_dims = [KetDimension(space) for space in spaces]
     bra_dims = [BraDimension(space) for space in spaces]
     return QTensor(ket_dims + bra_dims, values)
+
+
+Ket = KetVector
+Bra = BraVector
+Op = Operator
