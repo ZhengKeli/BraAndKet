@@ -275,7 +275,7 @@ class QTensor:
 
     def __matmul__(self, other):
         if not isinstance(other, QTensor):
-            raise NotImplementedError()
+            return self * other
 
         self_dot_axes = []
         other_dot_axes = []
@@ -298,6 +298,9 @@ class QTensor:
         new_values = np.tensordot(self.values, other.values, (self_dot_axes, other_dot_axes))
 
         return QTensor(new_dims, new_values)
+
+    def __rmatmul__(self, other):
+        return other * self
 
     # linear operations
 
