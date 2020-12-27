@@ -214,7 +214,7 @@ class QTensor:
         return traced
 
     @staticmethod
-    def wrap(flattened_dims, flattened_values, dims=None, copy=True):
+    def wrap(flattened_values, flattened_dims, dims=None, copy=True):
         wrapped_dims = [dim for group in flattened_dims for dim in group]
         wrapped_shape = [dim.n for dim in wrapped_dims]
         wrapped_values = np.reshape(flattened_values, wrapped_shape)
