@@ -8,9 +8,9 @@ from bnk.tensor import QTensor
 # evolve functions
 
 def schrodinger_evolve(
-        t, psi, hmt, hb, span, dt,
-        dlt=None, log_func=None,
-        rectify=True, reduce=True,
+        t, psi, hmt, hb, span, dt=None,
+        dlt=None, log_func=None, reduce=True,
+        method=None, rectify=True,
         verbose=True):
     hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
 
@@ -31,10 +31,7 @@ def schrodinger_evolve(
     hmt = np.asarray(hmt, np.complex64)
 
     # compute
-    def steps_evolve_func(_, psi, n, dt):
-        return schrodinger_evolve_kernel(psi, hmt, hb, dt, n)
-
-    evolve_func = get_tiling_steps_evolve_func(steps_evolve_func, dt)
+    evolve_func = get_schrodinger_evolve_func(hmt, hb, dt, method)
 
     evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
 
@@ -227,9 +224,46 @@ def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
     return t, rho
 
 
+# kernel selection
+
+def get_schrodinger_evolve_func(hmt, hb, dt, method):
+    if method is None:
+        try:
+            from scipy.linalg import expm
+            method = 'pade'
+        except ImportError:
+            method = 'euler'
+
+    if method == 'euler':
+        def steps_evolve_func(_, psi, n, dt):
+            return schrodinger_evolve_kernel_euler(psi, hmt, hb, dt, n)
+
+        evolve_func = get_tiling_steps_evolve_func(steps_evolve_func, dt)
+    elif method == 'pade':
+        def evolve_func(_, psi, span):
+            return schrodinger_evolve_kernel_pade(psi, hmt, hb, span)
+    else:
+        raise TypeError(f"Unsupported method {method}!")
+
+    return evolve_func
+
+
 # kernels
 
-def schrodinger_evolve_kernel(psi: np.ndarray, hmt: np.ndarray, hb, dt, n):
+
+def schrodinger_evolve_kernel_pade(
+        psi: np.ndarray,
+        hmt: np.ndarray,
+        hb, span):
+    from scipy.linalg import expm
+    psi = expm((span / 1j / hb) * hmt) @ psi
+    return psi
+
+
+def schrodinger_evolve_kernel_euler(
+        psi: np.ndarray,
+        hmt: np.ndarray,
+        hb, dt, n):
     kt = (dt / 1j / hb)
     for i in range(n):
         psi += kt * (hmt @ psi)
