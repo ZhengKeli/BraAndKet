@@ -37,7 +37,9 @@ def schrodinger_evolve(
 
     log_func = get_wrapping_log_func(log_func, flat_dims, org_dims, reduction)
 
-    t, psi = evolve_with_logs(t, psi, span, evolve_func, dlt, log_func, verbose)
+    evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
+
+    t, psi = evolve_func(t, psi, span)
 
     # wrap
     if reduce:
@@ -99,7 +101,9 @@ def lindblad_evolve(
 
     log_func = get_wrapping_log_func(log_func, flat_dims, org_dims, reduction)
 
-    t, rho = evolve_with_logs(t, rho, span, evolve_func, dlt, log_func, verbose)
+    evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
+
+    t, rho = evolve_func(t, rho, span)
 
     # wrap
     if reduce:
@@ -150,7 +154,9 @@ def dynamic_schrodinger_evolve(t, psi, hmt, k_func, hb, span, dt,
 
     _log_func = get_wrapping_log_func(log_func, flat_dims, dims)
 
-    t, psi = evolve_with_logs(t, psi, span, _evolve_func, dlt, _log_func, verbose)
+    evolve_func = get_logging_evolve_func(_evolve_func, _log_func, dlt, verbose)
+
+    t, psi = evolve_func(t, psi, span)
 
     # wrap
     psi = QTensor.wrap(psi, flat_dims, dims)
@@ -216,7 +222,9 @@ def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
 
     _log_func = get_wrapping_log_func(log_func, flat_dims, dims)
 
-    t, rho = evolve_with_logs(t, rho, span, _evolve_func, dlt, _log_func, verbose)
+    evolve_func = get_logging_evolve_func(_evolve_func, _log_func, dlt, verbose)
+
+    t, rho = evolve_func(t, rho, span)
 
     # wrap
     rho = QTensor.wrap(rho, flat_dims, dims)
@@ -305,41 +313,62 @@ def lindblad_evolve_kernel(
 
 # utils
 
-def evolve_with_logs(t, v, span, evolve_func,
-                     dlt=None, log_func=None, verbose=True):
-    dlt = (span / 100) if dlt is None else dlt
+def get_logging_evolve_func(evolve_func, log_func=None, dlt=None, verbose=True):
+    if log_func is None:
+        return evolve_func
+    if dlt is None:
+        return evolve_func
 
-    mt = t + span
-    progress = None
-
-    if log_func:
-        log_func(t, v)
     if verbose:
-        progress = tqdm(total=span)
+        def _logging_evolve_func(t, v, span):
+            mt = t + span
 
-    while True:
-        rt = mt - t
-        if rt < dlt:
-            break
-
-        v = evolve_func(t, v, dlt)
-        t += dlt
-
-        if log_func:
             log_func(t, v)
-        if verbose:
-            progress.update(dlt)
+            progress = tqdm(total=span)
 
-    if rt > 0:
-        v = evolve_func(t, v, rt)
-        t = mt
+            while True:
+                rt = mt - t
+                if rt < dlt:
+                    break
 
-        if log_func:
+                v = evolve_func(t, v, dlt)
+                t += dlt
+
+                log_func(t, v)
+                progress.update(dlt)
+
+            if rt > 0:
+                v = evolve_func(t, v, rt)
+                t = mt
+
+                log_func(t, v)
+                progress.update(rt)
+
+            return t, v
+    else:
+        def _logging_evolve_func(t, v, span):
+            mt = t + span
+
             log_func(t, v)
-        if verbose:
-            progress.update(rt)
+            while True:
+                rt = mt - t
+                if rt < dlt:
+                    break
 
-    return t, v
+                v = evolve_func(t, v, dlt)
+                t += dlt
+
+                log_func(t, v)
+
+            if rt > 0:
+                v = evolve_func(t, v, rt)
+                t = mt
+
+                log_func(t, v)
+
+            return t, v
+
+    return _logging_evolve_func
 
 
 def get_wrapping_log_func(log_func, flat_dims, org_dims, reduction: ReducedHSpace = None):
