@@ -233,25 +233,27 @@ def get_schrodinger_evolve_func(hmt, hb, dt, method):
             method = 'pade'
         except ImportError:
             method = 'euler'
+    else:
+        method = str(method).lower()
 
-    if method == 'euler':
-        def steps_evolve_func(_, psi, n, dt):
-            return schrodinger_evolve_kernel_euler(psi, hmt, hb, dt, n)
+    if method == 'pade':
+        def evolve_func(_, psi, span):
+            return schrodinger_kernel_pade(psi, hmt, hb, span)
+    else:
+        if method == 'euler':
+            def steps_evolve_func(_, psi, n, dt):
+                return schrodinger_kernel_euler(psi, hmt, hb, dt, n)
+        elif method == 'rk4':
+            def steps_evolve_func(_, psi, n, dt):
+                return schrodinger_kernel_rk4(psi, hmt, hb, dt, n)
+        else:
+            raise TypeError(f"Unsupported method {method}!")
 
         evolve_func = get_tiling_steps_evolve_func(steps_evolve_func, dt)
-    elif method == 'pade':
-        def evolve_func(_, psi, span):
-            return schrodinger_evolve_kernel_pade(psi, hmt, hb, span)
-    else:
-        raise TypeError(f"Unsupported method {method}!")
-
     return evolve_func
 
 
-# kernels
-
-
-def schrodinger_evolve_kernel_pade(
+def schrodinger_kernel_pade(
         psi: np.ndarray,
         hmt: np.ndarray,
         hb, span):
@@ -260,13 +262,27 @@ def schrodinger_evolve_kernel_pade(
     return psi
 
 
-def schrodinger_evolve_kernel_euler(
+def schrodinger_kernel_euler(
         psi: np.ndarray,
         hmt: np.ndarray,
         hb, dt, n):
     kt = (dt / 1j / hb)
     for i in range(n):
         psi += kt * (hmt @ psi)
+    return psi
+
+
+def schrodinger_kernel_rk4(
+        psi: np.ndarray,
+        hmt: np.ndarray,
+        hb, dt, n):
+    dt2 = dt / 2.0
+    for i in range(n):
+        k1 = (-1j / hb) * (hmt @ psi)
+        k2 = (-1j / hb) * (hmt @ (psi + dt2 * k1))
+        k3 = (-1j / hb) * (hmt @ (psi + dt2 * k2))
+        k4 = (-1j / hb) * (hmt @ (psi + dt * k3))
+        psi += dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
     return psi
 
 
