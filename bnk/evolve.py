@@ -9,8 +9,8 @@ from bnk.tensor import QTensor
 
 def schrodinger_evolve(
         t, psi, hmt, hb, span, dt=None,
-        dlt=None, log_func=None, reduce=True,
-        method=None, rectify=True,
+        dlt=None, log_func=None,
+        reduce=True, method=None, rectify=True,
         verbose=True):
     hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
 
@@ -56,7 +56,7 @@ def schrodinger_evolve(
 def lindblad_evolve(
         t, rho, hmt, deco, gamma, hb, span, dt,
         dlt=None, log_func=None,
-        rectify=True, reduce=True,
+        reduce=True, rectify=True,
         verbose=True):
     hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
     deco_list = [deco] if isinstance(deco, QTensor) else list(deco)
