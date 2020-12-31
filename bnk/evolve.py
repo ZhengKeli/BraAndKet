@@ -39,7 +39,8 @@ def schrodinger_evolve(
 
     evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
 
-    t, psi = evolve_func(t, psi, span)
+    psi = evolve_func(t, psi, span)
+    t = t + span
 
     # wrap
     if reduce:
@@ -103,7 +104,8 @@ def lindblad_evolve(
 
     evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
 
-    t, rho = evolve_func(t, rho, span)
+    rho = evolve_func(t, rho, span)
+    t = t + span
 
     # wrap
     if reduce:
@@ -314,59 +316,40 @@ def lindblad_evolve_kernel(
 # utils
 
 def get_logging_evolve_func(evolve_func, log_func=None, dlt=None, verbose=True):
-    if log_func is None:
-        return evolve_func
     if dlt is None:
         return evolve_func
 
-    if verbose:
-        def _logging_evolve_func(t, v, span):
-            mt = t + span
-
+    def _logging_evolve_func(t, v, span):
+        progress = None
+        if log_func:
             log_func(t, v)
+        if verbose:
             progress = tqdm(total=span)
 
-            while True:
-                rt = mt - t
-                if rt < dlt:
-                    break
+        mt = t + span
+        while True:
+            rt = mt - t
+            if rt < dlt:
+                break
 
-                v = evolve_func(t, v, dlt)
-                t += dlt
+            v = evolve_func(t, v, dlt)
+            t += dlt
 
+            if log_func:
                 log_func(t, v)
+            if verbose:
                 progress.update(dlt)
 
-            if rt > 0:
-                v = evolve_func(t, v, rt)
-                t = mt
+        if rt > 0:
+            v = evolve_func(t, v, rt)
+            t = mt
 
+            if log_func:
                 log_func(t, v)
+            if verbose:
                 progress.update(rt)
 
-            return t, v
-    else:
-        def _logging_evolve_func(t, v, span):
-            mt = t + span
-
-            log_func(t, v)
-            while True:
-                rt = mt - t
-                if rt < dlt:
-                    break
-
-                v = evolve_func(t, v, dlt)
-                t += dlt
-
-                log_func(t, v)
-
-            if rt > 0:
-                v = evolve_func(t, v, rt)
-                t = mt
-
-                log_func(t, v)
-
-            return t, v
+        return v
 
     return _logging_evolve_func
 
