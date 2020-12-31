@@ -156,7 +156,7 @@ def dynamic_lindblad_evolve(
     return t, rho
 
 
-# kernel selection
+# kernels: schrodinger
 
 def get_schrodinger_evolve_func(hmt, hb, dt, method):
     if method is None:
@@ -361,7 +361,7 @@ def get_logging_evolve_func(evolve_func, log_func=None, dlt=None, verbose=True):
     if dlt is None:
         return evolve_func
 
-    def _logging_evolve_func(t, v, span):
+    def logging_evolve_func(t, v, span):
         progress = None
         if log_func:
             log_func(t, v)
@@ -393,7 +393,7 @@ def get_logging_evolve_func(evolve_func, log_func=None, dlt=None, verbose=True):
 
         return v
 
-    return _logging_evolve_func
+    return logging_evolve_func
 
 
 def get_wrapping_log_func(log_func, wrapping):
