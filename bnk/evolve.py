@@ -65,42 +65,38 @@ def lindblad_evolve(
     return t, rho
 
 
-def dynamic_schrodinger_evolve(t, psi, hmt, k_func, hb, span, dt,
-                               dlt=None, log_func=None, rectify=True, verbose=True):
+def dynamic_schrodinger_evolve(
+        t, psi, hmt, k_func, hb, span, dt,
+        dlt=None, log_func=None,
+        reduce=True, method=None, rectify=True,
+        verbose=True):
     hmt_list = [hmt] if isinstance(hmt, QTensor) else list(hmt)
     hmt_count = len(hmt_list)
 
     # unwrap
     psi, hmt_list, wrapping = unwrap(psi, hmt_list, reduce=reduce)
 
-    hmt_list = [hmt.flattened_values for hmt in hmt_list]
-    hmt_list = [np.asarray(hmt, dtype=np.complex64) for hmt in hmt_list]
-
+    # prepare
     hmt_list = np.stack(hmt_list, -1)
 
     # compute
-    def _evolve_func(t, psi, sp):
-        n = int(np.ceil(sp / dt))
-        fdt = sp / n
+    def dv(t, psi):
+        k_list = np.reshape(k_func(t), [hmt_count])
+        hmt = np.sum(hmt_list * k_list, -1)
+        return -1j / hb * (hmt @ psi)
 
-        kt = (fdt / 1j / hb)
-        for i in range(n):
-            ti = t + i * fdt
+    stepping_kernel = get_differential_stepping_kernel(dv, method)
 
-            k_list = np.reshape(k_func(ti), [hmt_count])
-            hmt = np.sum(hmt_list * k_list, -1)
+    evolve_func = get_stepping_evolve_func(stepping_kernel, dt)
 
-            psi += kt * (hmt @ psi)
-
-        if rectify:
-            psi /= np.sqrt(np.sum(np.conj(psi) * psi))
-        return psi
-
-    _log_func = get_wrapping_log_func(log_func, flat_dims, dims)
+    evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
 
     log_func = get_wrapping_log_func(log_func, wrapping)
 
-    t, psi = evolve_func(t, psi, span)
+    evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
+
+    psi = evolve_func(t, psi, span)
+    t = t + span
 
     # wrap
     psi = wrap(psi, wrapping)
@@ -108,8 +104,11 @@ def dynamic_schrodinger_evolve(t, psi, hmt, k_func, hb, span, dt,
     return t, psi
 
 
-def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
-                            dlt=None, log_func=None, rectify=True, verbose=True):
+def dynamic_lindblad_evolve(
+        t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
+        dlt=None, log_func=None,
+        reduce=True, method=None, rectify=True,
+        verbose=True):
     hmt_list = [hmt] if isinstance(hmt, QTensor) else list(hmt)
     deco_list = [deco] if isinstance(deco, QTensor) else list(deco)
     hmt_count = len(hmt_list)
@@ -118,45 +117,38 @@ def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
     # unwrap
     rho, (hmt_list, deco_list), wrapping = unwrap(rho, (hmt_list, deco_list), reduce=reduce)
 
-    hmt_list = [hmt.flattened_values for hmt in hmt_list]
-    hmt_list = [np.asarray(hmt, dtype=np.complex64) for hmt in hmt_list]
+    # prepare
     hmt_list = np.stack(hmt_list, -1)
-
-    deco_list = [deco.flattened_values for deco in deco_list]
-    deco_list = [np.asarray(deco, dtype=np.complex64) for deco in deco_list]
     deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
     deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
 
     # compute
-    def _evolve_func(t, rho, sp):
-        n = int(np.ceil(sp / dt))
-        fdt = sp / n
+    def dv(t, rho):
+        k_list = np.reshape(k_func(t), [hmt_count])
+        hmt = np.sum(hmt_list * k_list, -1)
+        sh_part = hmt @ rho - rho @ hmt
 
-        k_sh = - 1j / hb
-        for i in range(n):
-            ti = t + i * fdt
+        gamma_list = np.reshape(gamma_func(t), [deco_count])
+        ln_part = sum([
+            gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
+            for gamma, deco, deco_ct, deco_ct_deco
+            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list)
+        ])
 
-            k_list = np.reshape(k_func(ti), [hmt_count])
-            hmt = np.sum(hmt_list * k_list, -1)
-            sh_part = hmt @ rho - rho @ hmt
+        return (- 1j / hb) * sh_part + ln_part
 
-            gamma_list = np.reshape(gamma_func(ti), [deco_count])
-            ln_part = sum(
-                gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
-                for gamma, deco, deco_ct, deco_ct_deco
-                in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list))
+    stepping_kernel = get_differential_stepping_kernel(dv, method)
 
-            rho += fdt * (k_sh * sh_part + ln_part)
+    evolve_func = get_stepping_evolve_func(stepping_kernel, dt)
 
-        if rectify:
-            rho /= np.trace(rho, axis1=-2, axis2=-1)
-        return rho
-
-    _log_func = get_wrapping_log_func(log_func, flat_dims, dims)
+    evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
 
     log_func = get_wrapping_log_func(log_func, wrapping)
 
-    t, rho = evolve_func(t, rho, span)
+    evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
+
+    rho = evolve_func(t, rho, span)
+    t = t + span
 
     # wrap
     rho = wrap(rho, wrapping)
@@ -181,15 +173,15 @@ def get_schrodinger_evolve_func(hmt, hb, dt, method):
             return schrodinger_kernel_pade(psi, hmt, hb, span)
     else:
         if method == 'euler':
-            def steps_evolve_func(_, psi, n, dt):
+            def stepping_kernel(_, psi, n, dt):
                 return schrodinger_kernel_euler(psi, hmt, hb, dt, n)
         elif method == 'rk4':
-            def steps_evolve_func(_, psi, n, dt):
+            def stepping_kernel(_, psi, n, dt):
                 return schrodinger_kernel_rk4(psi, hmt, hb, dt, n)
         else:
             raise TypeError(f"Unsupported method {method}!")
 
-        evolve_func = get_tiling_steps_evolve_func(steps_evolve_func, dt)
+        evolve_func = get_stepping_evolve_func(stepping_kernel, dt)
     return evolve_func
 
 
@@ -264,6 +256,52 @@ def lindblad_kernel_euler(
 
         rho += dt * (k_sh * sh_part + ln_part)
     return rho
+
+
+# kernels: differential stepping
+
+def get_stepping_evolve_func(stepping_kernel, dt):
+    def stepping_evolve_func(t, v, span):
+        tiled_n = int(np.ceil(span / dt))
+        tiled_dt = span / tiled_n
+        return stepping_kernel(t, v, tiled_n, tiled_dt)
+
+    return stepping_evolve_func
+
+
+def get_differential_stepping_kernel(dv, method='euler'):
+    if method is None:
+        method = 'euler'
+    else:
+        method = str(method).lower()
+
+    if method == 'euler':
+        def stepping_kernel_func(t, v, n, dt):
+            for i in range(n):
+                v = one_step_euler(t, v, dt, dv)
+            return v
+    elif method == 'rk4':
+        def stepping_kernel_func(t, v, n, dt):
+            for i in range(n):
+                v = one_step_rk4(t, v, dt, dv)
+            return v
+    else:
+        raise TypeError(f"Unsupported method {method}")
+
+    return stepping_kernel_func
+
+
+def one_step_euler(t, v, dt, dv):
+    return v + dt * dv(t, v)
+
+
+def one_step_rk4(t, v, dt, dv):
+    dt2 = dt / 2.0
+    k1 = dv(t, v)
+    k2 = dv(t + dt2, v + dt2 * k1)
+    k3 = dv(t + dt2, v + dt2 * k2)
+    k4 = dv(t + dt, v + dt * k3)
+    return v + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
 
 
 # utils: wrap & unwrap
@@ -369,14 +407,7 @@ def get_wrapping_log_func(log_func, wrapping):
     return wrapping_log_func
 
 
-def get_tiling_steps_evolve_func(steps_evolve_func, dt):
-    def _tiling_evolve_func(t, v, span):
-        tiled_n = int(np.ceil(span / dt))
-        tiled_dt = span / tiled_n
-        return steps_evolve_func(t, v, tiled_n, tiled_dt)
-
-    return _tiling_evolve_func
-
+# utils: rectify
 
 def get_rectifying_psi_evolve_func(evolve_func, rectify=True):
     if not rectify:
