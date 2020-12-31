@@ -208,12 +208,13 @@ def schrodinger_kernel_rk4(
         psi: np.ndarray,
         hmt: np.ndarray,
         hb, dt, n):
+    k = -1j / hb
     dt2 = dt / 2.0
     for i in range(n):
-        k1 = (-1j / hb) * (hmt @ psi)
-        k2 = (-1j / hb) * (hmt @ (psi + dt2 * k1))
-        k3 = (-1j / hb) * (hmt @ (psi + dt2 * k2))
-        k4 = (-1j / hb) * (hmt @ (psi + dt * k3))
+        k1 = k * (hmt @ psi)
+        k2 = k * (hmt @ (psi + dt2 * k1))
+        k3 = k * (hmt @ (psi + dt2 * k2))
+        k4 = k * (hmt @ (psi + dt * k3))
         psi += dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
     return psi
 
@@ -229,6 +230,11 @@ def get_lindblad_evolve_func(hmt, deco_list, gamma_list, hb, dt, method):
     if method == 'euler':
         def stepping_kernel(_, rho, n, dt):
             return lindblad_kernel_euler(rho, hmt, gamma_list, deco_list, hb, dt, n)
+
+        evolve_func = get_stepping_evolve_func(stepping_kernel, dt)
+    elif method == 'rk4':
+        def stepping_kernel(_, rho, n, dt):
+            return lindblad_kernel_rk4(rho, hmt, gamma_list, deco_list, hb, dt, n)
 
         evolve_func = get_stepping_evolve_func(stepping_kernel, dt)
     else:
@@ -255,6 +261,37 @@ def lindblad_kernel_euler(
         ], axis=0)
 
         rho += dt * (k_sh * sh_part + ln_part)
+    return rho
+
+
+def lindblad_kernel_rk4(
+        rho: np.ndarray,
+        hmt: np.ndarray, gamma_list, deco_list,
+        hb, dt, n):
+    deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
+    deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
+
+    k_sh = - 1j / hb
+
+    def dv(rho):
+        sh_part = hmt @ rho - rho @ hmt
+
+        ln_part = np.sum([
+            gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
+            for gamma, deco, deco_ct, deco_ct_deco
+            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list)
+        ], axis=0)
+
+        return k_sh * sh_part + ln_part
+
+    for i in range(n):
+        dt2 = dt / 2.0
+        k1 = dv(rho)
+        k2 = dv(rho + dt2 * k1)
+        k3 = dv(rho + dt2 * k2)
+        k4 = dv(rho + dt * k3)
+        rho += dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+
     return rho
 
 
