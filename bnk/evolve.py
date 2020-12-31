@@ -15,27 +15,14 @@ def schrodinger_evolve(
     hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
 
     # unwrap
-    org_dims = psi.dims
-    if reduce:
-        reduction = ReducedHSpace.from_initial([psi], [hmt])
-        psi = reduction.reduce(psi)
-        hmt = reduction.reduce(hmt)
-    else:
-        reduction = None
-        hmt = hmt.broadcast(psi.dims)
-
-    flat_dims, psi = psi.flatten()
-    hmt = hmt.flattened_values
-
-    psi = np.asarray(psi, np.complex64)
-    hmt = np.asarray(hmt, np.complex64)
+    psi, hmt, wrapping = unwrap(psi, hmt, reduce=reduce)
 
     # compute
     evolve_func = get_schrodinger_evolve_func(hmt, hb, dt, method)
 
     evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
 
-    log_func = get_wrapping_log_func(log_func, flat_dims, org_dims, reduction)
+    log_func = get_wrapping_log_func(log_func, wrapping)
 
     evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
 
@@ -43,12 +30,7 @@ def schrodinger_evolve(
     t = t + span
 
     # wrap
-    if reduce:
-        psi = QTensor.wrap(psi, flat_dims)
-        psi = reduction.inflate(psi)
-        psi = psi.transposed(org_dims)
-    else:
-        psi = QTensor.wrap(psi, flat_dims, org_dims)
+    psi = wrap(psi, wrapping)
 
     return t, psi
 
@@ -63,33 +45,7 @@ def lindblad_evolve(
     gamma_list = np.reshape(gamma, [len(deco_list)])
 
     # unwrap
-    org_dims = rho.dims
-    if reduce:
-        reduction = ReducedHSpace.from_initial([rho], [hmt, *deco_list])
-        rho = reduction.reduce(rho)
-        hmt = reduction.reduce(hmt)
-        deco_list = [reduction.reduce(deco) for deco in deco_list]
-    else:
-        reduction = None
-        all_dims = {
-            *rho.dims,
-            *hmt.dims,
-            *(dim for deco in deco_list for dim in deco.dims)
-        }
-        rho = rho.broadcast(all_dims)
-        hmt = hmt.broadcast(all_dims)
-        deco_list = [deco.broadcast(all_dims) for deco in deco_list]
-
-    flat_dims, rho = rho.flatten()
-    rho = np.asarray(rho, dtype=np.complex64)
-
-    hmt = hmt.flattened_values
-    hmt = np.asarray(hmt, dtype=np.complex64)
-
-    deco_list = [deco.flattened_values for deco in deco_list]
-    deco_list = [np.asarray(deco, dtype=np.complex64) for deco in deco_list]
-    deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
-    deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
+    rho, (hmt, deco_list), wrapping = unwrap(rho, (hmt, deco_list), reduce=reduce)
 
     # compute
     def steps_evolve_func(_, rho, n, dt):
@@ -100,7 +56,7 @@ def lindblad_evolve(
 
     evolve_func = get_rectifying_rho_evolve_func(evolve_func, rectify)
 
-    log_func = get_wrapping_log_func(log_func, flat_dims, org_dims, reduction)
+    log_func = get_wrapping_log_func(log_func, wrapping)
 
     evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
 
@@ -108,12 +64,7 @@ def lindblad_evolve(
     t = t + span
 
     # wrap
-    if reduce:
-        rho = QTensor.wrap(rho, flat_dims)
-        rho = reduction.inflate(rho)
-        rho = rho.transposed(org_dims)
-    else:
-        rho = QTensor.wrap(rho, flat_dims, org_dims)
+    rho = wrap(rho, wrapping)
 
     return t, rho
 
@@ -123,13 +74,8 @@ def dynamic_schrodinger_evolve(t, psi, hmt, k_func, hb, span, dt,
     hmt_list = [hmt] if isinstance(hmt, QTensor) else list(hmt)
     hmt_count = len(hmt_list)
 
-    # broadcast
-    hmt_list = [hmt.broadcast(psi.dims) for hmt in hmt_list]
-
     # unwrap
-    dims = psi.dims
-    flat_dims, psi = psi.flatten()
-    psi = np.asarray(psi, dtype=np.complex64)
+    psi, hmt_list, wrapping = unwrap(psi, hmt_list, reduce=reduce)
 
     hmt_list = [hmt.flattened_values for hmt in hmt_list]
     hmt_list = [np.asarray(hmt, dtype=np.complex64) for hmt in hmt_list]
@@ -156,12 +102,12 @@ def dynamic_schrodinger_evolve(t, psi, hmt, k_func, hb, span, dt,
 
     _log_func = get_wrapping_log_func(log_func, flat_dims, dims)
 
-    evolve_func = get_logging_evolve_func(_evolve_func, _log_func, dlt, verbose)
+    log_func = get_wrapping_log_func(log_func, wrapping)
 
     t, psi = evolve_func(t, psi, span)
 
     # wrap
-    psi = QTensor.wrap(psi, flat_dims, dims)
+    psi = wrap(psi, wrapping)
 
     return t, psi
 
@@ -173,20 +119,8 @@ def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
     hmt_count = len(hmt_list)
     deco_count = len(deco_list)
 
-    # broadcast
-    all_dims = {
-        *rho.dims,
-        *(dim for hmt in hmt_list for dim in hmt.dims),
-        *(dim for deco in deco_list for dim in deco.dims)
-    }
-    rho = rho.broadcast(all_dims)
-    hmt_list = [hmt.broadcast(all_dims) for hmt in hmt_list]
-    deco_list = [deco.broadcast(all_dims) for deco in deco_list]
-
     # unwrap
-    dims = rho.dims
-    flat_dims, rho = rho.flatten()
-    rho = np.asarray(rho, dtype=np.complex64)
+    rho, (hmt_list, deco_list), wrapping = unwrap(rho, (hmt_list, deco_list), reduce=reduce)
 
     hmt_list = [hmt.flattened_values for hmt in hmt_list]
     hmt_list = [np.asarray(hmt, dtype=np.complex64) for hmt in hmt_list]
@@ -224,12 +158,12 @@ def dynamic_lindblad_evolve(t, rho, hmt, k_func, deco, gamma_func, hb, span, dt,
 
     _log_func = get_wrapping_log_func(log_func, flat_dims, dims)
 
-    evolve_func = get_logging_evolve_func(_evolve_func, _log_func, dlt, verbose)
+    log_func = get_wrapping_log_func(log_func, wrapping)
 
     t, rho = evolve_func(t, rho, span)
 
     # wrap
-    rho = QTensor.wrap(rho, flat_dims, dims)
+    rho = wrap(rho, wrapping)
 
     return t, rho
 
@@ -313,7 +247,58 @@ def lindblad_evolve_kernel(
     return rho
 
 
-# utils
+# utils: wrap & unwrap
+
+def unwrap(value: QTensor, operators, reduce=True, dtype=np.complex64):
+    org_dims = value.dims
+    if reduce:
+        reduction = ReducedHSpace.from_initial([value], [*structured_iter(operators)])
+        value = reduction.reduce(value)
+        operators = structured_map(operators, reduction.reduce)
+    else:
+        reduction = None
+        operators = structured_map(operators, lambda op: op.broadcast(value.dims))
+
+    flat_dims, value = value.flatten()
+    value = np.asarray(value, dtype=dtype)
+
+    operators = structured_map(operators, lambda op: op.flattened_values)
+    operators = structured_map(operators, lambda op: np.asarray(op, dtype=dtype))
+
+    wrapping = org_dims, flat_dims, reduction
+    return value, operators, wrapping
+
+
+def wrap(value, wrapping) -> QTensor:
+    org_dims, flat_dims, reduction = wrapping
+    if reduction:
+        value = QTensor.wrap(value, flat_dims)
+        value = reduction.inflate(value)
+        value = value.transposed(org_dims)
+    else:
+        value = QTensor.wrap(value, flat_dims, org_dims)
+    return value
+
+
+def structured_iter(structure):
+    if isinstance(structure, (list, tuple)):
+        for item in structure:
+            for sub_item in structured_iter(item):
+                yield sub_item
+    else:
+        yield structure
+
+
+def structured_map(structure, map_func):
+    if isinstance(structure, list):
+        return [structured_map(item, map_func) for item in structure]
+    elif isinstance(structure, tuple):
+        return tuple(structured_map(item, map_func) for item in structure)
+    else:
+        return map_func(structure)
+
+
+# utils: log
 
 def get_logging_evolve_func(evolve_func, log_func=None, dlt=None, verbose=True):
     if dlt is None:
@@ -354,22 +339,15 @@ def get_logging_evolve_func(evolve_func, log_func=None, dlt=None, verbose=True):
     return _logging_evolve_func
 
 
-def get_wrapping_log_func(log_func, flat_dims, org_dims, reduction: ReducedHSpace = None):
+def get_wrapping_log_func(log_func, wrapping):
     if log_func is None:
         return None
 
-    if reduction is None:
-        def _wrapping_log_func(t_log, psi_log):
-            psi_log = QTensor.wrap(psi_log, flat_dims, org_dims)
-            return log_func(t_log, psi_log)
-    else:
-        def _wrapping_log_func(t_log, psi_log):
-            psi_log = QTensor.wrap(psi_log, flat_dims)
-            psi_log = reduction.inflate(psi_log)
-            psi_log = psi_log.transposed(org_dims)
-            return log_func(t_log, psi_log)
+    def wrapping_log_func(t_log, psi_log):
+        psi_log = wrap(psi_log, wrapping)
+        return log_func(t_log, psi_log)
 
-    return _wrapping_log_func
+    return wrapping_log_func
 
 
 def get_tiling_steps_evolve_func(steps_evolve_func, dt):
