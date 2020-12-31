@@ -38,7 +38,7 @@ def schrodinger_evolve(
 def lindblad_evolve(
         t, rho, hmt, deco, gamma, hb, span, dt,
         dlt=None, log_func=None,
-        reduce=True, rectify=True,
+        reduce=True, method=None, rectify=True,
         verbose=True):
     hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
     deco_list = [deco] if isinstance(deco, QTensor) else list(deco)
@@ -48,11 +48,7 @@ def lindblad_evolve(
     rho, (hmt, deco_list), wrapping = unwrap(rho, (hmt, deco_list), reduce=reduce)
 
     # compute
-    def steps_evolve_func(_, rho, n, dt):
-        return lindblad_evolve_kernel(
-            rho, hmt, gamma_list, deco_list, deco_ct_list, deco_ct_deco_list, hb, dt, n)
-
-    evolve_func = get_tiling_steps_evolve_func(steps_evolve_func, dt)
+    evolve_func = get_lindblad_evolve_func(hmt, deco_list, gamma_list, hb, dt, method)
 
     evolve_func = get_rectifying_rho_evolve_func(evolve_func, rectify)
 
@@ -230,18 +226,41 @@ def schrodinger_kernel_rk4(
     return psi
 
 
-def lindblad_evolve_kernel(
-        rho: np.ndarray, hmt: np.ndarray,
-        gamma_list, deco_list, deco_ct_list, deco_ct_deco_list,
+# kernels: lindblad
+
+def get_lindblad_evolve_func(hmt, deco_list, gamma_list, hb, dt, method):
+    if method is None:
+        method = 'euler'
+    else:
+        method = str(method).lower()
+
+    if method == 'euler':
+        def stepping_kernel(_, rho, n, dt):
+            return lindblad_kernel_euler(rho, hmt, gamma_list, deco_list, hb, dt, n)
+
+        evolve_func = get_stepping_evolve_func(stepping_kernel, dt)
+    else:
+        raise TypeError(f"Unsupported method {method}!")
+
+    return evolve_func
+
+
+def lindblad_kernel_euler(
+        rho: np.ndarray,
+        hmt: np.ndarray, gamma_list, deco_list,
         hb, dt, n):
+    deco_ct_list = [np.conj(np.transpose(deco)) for deco in deco_list]
+    deco_ct_deco_list = [deco_ct @ deco for deco, deco_ct in zip(deco_list, deco_ct_list)]
+
     k_sh = - 1j / hb
     for i in range(n):
         sh_part = hmt @ rho - rho @ hmt
 
-        ln_part = sum(
+        ln_part = np.sum([
             gamma * (deco @ rho @ deco_ct - 0.5 * (deco_ct_deco @ rho + rho @ deco_ct_deco))
             for gamma, deco, deco_ct, deco_ct_deco
-            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list))
+            in zip(gamma_list, deco_list, deco_ct_list, deco_ct_deco_list)
+        ], axis=0)
 
         rho += dt * (k_sh * sh_part + ln_part)
     return rho
