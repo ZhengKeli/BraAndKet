@@ -3,6 +3,7 @@ from tqdm import tqdm
 
 from bnk.reduce import ReducedHSpace
 from bnk.tensor import QTensor
+from bnk.utils import structured_iter, structured_map
 
 
 # evolve functions
@@ -348,7 +349,7 @@ def unwrap(value: QTensor, operators, reduce=True, dtype=np.complex64):
     if reduce:
         reduction = ReducedHSpace.from_initial([value], [*structured_iter(operators)])
         value = reduction.reduce(value)
-        operators = structured_map(operators, reduction.reduce)
+        operators = reduction.reduce(operators)
     else:
         reduction = None
         operators = structured_map(operators, lambda op: op.broadcast(value.dims))
@@ -356,8 +357,7 @@ def unwrap(value: QTensor, operators, reduce=True, dtype=np.complex64):
     flat_dims, value = value.flatten()
     value = np.asarray(value, dtype=dtype)
 
-    operators = structured_map(operators, lambda op: op.flattened_values)
-    operators = structured_map(operators, lambda op: np.asarray(op, dtype=dtype))
+    operators = structured_map(operators, lambda op: np.asarray(op.flattened_values, dtype=dtype))
 
     wrapping = org_dims, flat_dims, reduction
     return value, operators, wrapping
@@ -372,24 +372,6 @@ def wrap(value, wrapping) -> QTensor:
     else:
         value = QTensor.wrap(value, flat_dims, org_dims)
     return value
-
-
-def structured_iter(structure):
-    if isinstance(structure, (list, tuple)):
-        for item in structure:
-            for sub_item in structured_iter(item):
-                yield sub_item
-    else:
-        yield structure
-
-
-def structured_map(structure, map_func):
-    if isinstance(structure, list):
-        return [structured_map(item, map_func) for item in structure]
-    elif isinstance(structure, tuple):
-        return tuple(structured_map(item, map_func) for item in structure)
-    else:
-        return map_func(structure)
 
 
 # utils: log

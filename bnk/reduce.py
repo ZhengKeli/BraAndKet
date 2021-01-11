@@ -2,6 +2,7 @@ from typing import Iterable
 
 import numpy as np
 from bnk.tensor import HSpace, QTensor, zero, one
+from bnk.utils import structured_iter, structured_map
 
 
 class ReducedHSpace(HSpace):
@@ -20,7 +21,7 @@ class ReducedHSpace(HSpace):
     @staticmethod
     def from_initial(initial: Iterable[QTensor], operators: Iterable[QTensor], name=None, key=None):
         all_psi = zero
-        for tensor in initial:
+        for tensor in structured_iter(initial):
             if all(dim.is_ket for dim in tensor.dims):
                 psi = to_bool(tensor)
             elif all(dim.is_ket for dim in tensor.dims):
@@ -35,7 +36,7 @@ class ReducedHSpace(HSpace):
         all_psi = to_bool(all_psi)
 
         all_op = zero
-        for op in operators:
+        for op in structured_iter(operators):
             all_op += to_bool(op)
         all_op = to_bool(all_op)
 
@@ -60,7 +61,7 @@ class ReducedHSpace(HSpace):
     def org_eigenstate(self, index):
         return self.org_eigenstates[index]
 
-    def reduce(self, tensor: QTensor):
+    def _reduce_one(self, tensor: QTensor):
         has_ket = False
         has_bra = False
         for dim in tensor.dims:
@@ -74,7 +75,10 @@ class ReducedHSpace(HSpace):
             tensor = tensor @ self.transform.ct
         return tensor
 
-    def inflate(self, tensor: QTensor):
+    def reduce(self, tensor):
+        return structured_map(tensor, self._reduce_one)
+
+    def _inflate_one(self, tensor: QTensor):
         has_ket = False
         has_bra = False
         for dim in tensor.dims:
@@ -87,6 +91,9 @@ class ReducedHSpace(HSpace):
         if has_bra:
             tensor = tensor @ self.transform
         return tensor
+
+    def inflate(self, tensor):
+        return structured_map(tensor, self._inflate_one)
 
 
 # utils
