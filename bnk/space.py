@@ -57,20 +57,6 @@ class NumSpace(Space):
 
 
 class HSpace(Space, abc.ABC):
-    @abc.abstractmethod
-    def eigenstate(self, index, dtype=np.float32):
-        pass
-
-    def eig(self, index, dtype=np.float32):
-        return self.eigenstate(index, dtype)
-
-    @abc.abstractmethod
-    def identity(self, dtype=np.float32):
-        pass
-
-    def idt(self, dtype=np.float32):
-        return self.identity(dtype)
-
     @property
     @abc.abstractmethod
     def ct(self):
@@ -85,6 +71,23 @@ class HSpace(Space, abc.ABC):
     @abc.abstractmethod
     def bra(self):
         pass
+
+    @abc.abstractmethod
+    def eigenstate(self, index, dtype=np.float32):
+        pass
+
+    @abc.abstractmethod
+    def identity(self, dtype=np.float32):
+        pass
+
+    def projector(self, ket_index, bra_index=None, dtype=np.float32):
+        if bra_index is None:
+            bra_index = ket_index
+        return self.ket.eigenstate(ket_index, dtype) @ self.bra.eigenstate(bra_index, dtype)
+
+    def symmetry(self, index1, index2=None, dtype=np.float32):
+        projector = self.projector(index1, index2, dtype)
+        return projector + projector.ct
 
 
 class KetSpace(HSpace):
