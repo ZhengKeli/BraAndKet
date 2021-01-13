@@ -1,151 +1,24 @@
-import enum
-from typing import Iterable, Tuple
+from typing import Iterable
 
 import numpy as np
 
+from bnk.space import Space, HSpace, NumSpace, BraSpace, KetSpace
 
-# space
-
-class HSpace:
-    def __init__(self, n, name=None, key=None):
-        self._n = n
-        self._name = name
-        self._key = key
-
-    @property
-    def n(self):
-        return self._n
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def key(self):
-        return self._key
-
-    def __repr__(self):
-        return f"<Space: n={self.n}, name={self.name}, id={id(self)}>"
-
-    def eigenstate(self, index):
-        values = np.zeros(self.n, np.float)
-        values[index] = 1.0
-        return KetVector([self], values)
-
-    def eig(self, index):
-        return self.eigenstate(index)
-
-    def identity(self):
-        return Operator([self], np.eye(self.n))
-
-    def ide(self):
-        return self.identity()
-
-
-# dimension
-
-class DimensionType(enum.Enum):
-    Other = enum.auto()
-    Ket = enum.auto()
-    Bra = enum.auto()
-
-    @property
-    def ct(self):
-        if self is DimensionType.Ket:
-            return DimensionType.Bra
-        elif self is DimensionType.Bra:
-            return DimensionType.Ket
-        else:
-            return None
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return str(self)
-
-
-class QDimension:
-    def __init__(self, typ: DimensionType, space: HSpace):
-        self._typ = typ
-        self._space = space
-
-    @property
-    def typ(self):
-        return self._typ
-
-    @property
-    def is_ket(self):
-        return self.typ == DimensionType.Ket
-
-    @property
-    def is_bra(self):
-        return self.typ == DimensionType.Bra
-
-    @property
-    def space(self):
-        return self._space
-
-    @property
-    def n(self):
-        return self.space.n
-
-    @property
-    def name(self):
-        return self.space.name
-
-    @property
-    def key(self):
-        return self.space.key
-
-    @property
-    def ct(self):
-        return QDimension(self.typ.ct, self.space)
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-        return isinstance(other, QDimension) and \
-               other.space == self.space and \
-               other.typ == self.typ
-
-    def __hash__(self):
-        return hash((self.typ, self.space))
-
-    def __repr__(self):
-        return f"<Dimension: typ={self.typ}, n={self.n}, name={self.name}>"
-
-
-def KetDimension(space: HSpace):
-    return QDimension(DimensionType.Ket, space)
-
-
-def BraDimension(space: HSpace):
-    return QDimension(DimensionType.Bra, space)
-
-
-def OtherDimension(space: HSpace):
-    return QDimension(DimensionType.Other, space)
-
-
-BraDim = BraDimension
-KetDim = KetDimension
-OtherDim = OtherDimension
-
-
-# tensor
 
 class QTensor:
-    def __init__(self, dims: Iterable[QDimension], values):
-        dims: Tuple[QDimension, ...] = tuple(dims)
-        values: np.ndarray = np.asarray(values)
+    def __init__(self, dims: Iterable[Space], values):
+        dims = tuple(dims)
+        values = np.asarray(values)
 
-        for i, dim in enumerate(dims):
-            if any(dim == dim2 for dim2 in dims[i + 1:]):
-                raise RuntimeError("There are duplicated dims!")
+        if len(set(dims)) != len(dims):
+            raise ValueError("There are duplicated dims!")
 
-        if tuple(dim.n for dim in dims) != np.shape(values):
-            raise RuntimeError("The shape of values does not match the dims!")
+        for dim, shape_n in zip(dims, np.shape(values)):
+            if shape_n == dim.n:
+                continue
+            if isinstance(dim, NumSpace) and shape_n == 1:
+                continue
+            raise ValueError(f"The dim {dim} does not match the shape!")
 
         self._dims = dims
         self._values = values
@@ -158,60 +31,58 @@ class QTensor:
     def values(self):
         return self._values
 
+    @property
+    def dtype(self):
+        return self.values.dtype
+
     # dimension operations
 
-    def transposed(self, new_dims: Iterable[QDimension]):
+    def transposed(self, new_dims: Iterable[Space]):
         if self.dims == new_dims:
             return self
         new_axes = [self.dims.index(new_dim) for new_dim in new_dims]
         new_values = np.transpose(self.values, axes=new_axes)
         return QTensor(new_dims, new_values)
 
-    def broadcast(self, new_dims: Iterable[QDimension]):
+    def broadcast(self, broadcast_dims: Iterable[Space]):
         if len(self.dims) == 0:
             if self.values == 0:
-                values = np.zeros([dim.n for dim in new_dims])
-                return QTensor(new_dims, values)
+                values = np.zeros([dim.n for dim in broadcast_dims])
+                return QTensor(broadcast_dims, values)
 
-        broadcast_pairs = {}
-        for dim in new_dims:
-            if dim in self.dims:
-                continue
-            pair = broadcast_pairs.get(dim.space)
-            if pair is None:
-                pair = [dim]
-                broadcast_pairs[dim.space] = pair
-            elif dim not in pair:
-                pair.append(dim)
-
+        broadcast_num_dims = []
         broadcast_identity = one
-        for space, dims in broadcast_pairs.items():
-            if len(dims) != 2 or dims[0] != dims[1].ct:
-                raise TypeError("Can only broadcast on the paired dimensions.")
-            broadcast_identity @= space.identity()
 
-        return self @ broadcast_identity
+        broadcast_dims = set(broadcast_dims)
+        while broadcast_dims:
+            broadcast_dim = broadcast_dims.pop()
 
-    def trace(self, *spaces: HSpace):
-        if len(spaces) == 0:
-            spaces = tuple(dim.space for dim in self.dims)
-
-        traced = self
-        for space in spaces:
-            try:
-                ket_axis = traced.dims.index(KetDimension(space))
-            except ValueError:
-                continue
-            try:
-                bra_axis = traced.dims.index(BraDimension(space))
-            except ValueError:
+            if broadcast_dim in self.dims:
                 continue
 
-            new_dims = tuple(dim for axis, dim in enumerate(traced.dims) if axis not in (ket_axis, bra_axis))
-            new_values = np.trace(traced.values, axis1=ket_axis, axis2=bra_axis)
-            traced = QTensor(new_dims, new_values)
+            if isinstance(broadcast_dim, NumSpace):
+                broadcast_num_dims.append(broadcast_dim)
+                continue
 
-        return traced
+            if isinstance(broadcast_dim, HSpace):
+                if broadcast_dim.ct not in broadcast_dims:
+                    raise TypeError(f"Can not broadcast unpaired dimension {broadcast_dim}.")
+                broadcast_dims.remove(broadcast_dim.ct)
+                broadcast_identity @= broadcast_dim.identity(self.dtype)
+                continue
+
+            raise TypeError(f"Unsupported custom type {type(broadcast_dim)} as a dimension type.")
+
+        new_tensor = self @ broadcast_identity
+
+        if broadcast_num_dims:
+            num_shape = [1] * len(broadcast_num_dims)
+            new_shape = (*num_shape, *np.shape(new_tensor.values))
+            new_values = np.reshape(new_tensor.values, new_shape)
+            broadcast_dims = (*broadcast_num_dims, *new_tensor.dims)
+            new_tensor = QTensor(broadcast_dims, new_values)
+
+        return new_tensor
 
     @staticmethod
     def wrap(flattened_values, flattened_dims, dims=None, copy=True):
@@ -269,27 +140,51 @@ class QTensor:
 
     @property
     def ct(self):
-        new_dims = [dim.ct for dim in self.dims]
+        new_dims = (dim.ct for dim in self.dims if isinstance(dim, HSpace))
         new_values = np.conjugate(self.values)
         return QTensor(new_dims, new_values)
 
+    def trace(self, *spaces: HSpace):
+        if len(spaces) == 0:
+            spaces = self.dims
+
+        traced = self
+        for space in spaces:
+            ket_axis = traced.dims.index(space.ket)
+            bra_axis = traced.dims.index(space.bra)
+            new_dims = tuple(dim for axis, dim in enumerate(traced.dims) if axis not in (ket_axis, bra_axis))
+            new_values = np.trace(traced.values, axis1=ket_axis, axis2=bra_axis)
+            traced = QTensor(new_dims, new_values)
+
+        return traced
+
     def __matmul__(self, other):
         if not isinstance(other, QTensor):
-            return self * other
+            other_values = np.asarray(other)
+            other_shape = np.shape(other_values)
+            if not other_shape:
+                return self * other
+            other_dims = [NumSpace(shape_n) for shape_n in other_shape]
+            other_tensor = QTensor(other_dims, other_values)
+            return self @ other_tensor
 
         self_dot_axes = []
         other_dot_axes = []
         for self_axis, self_dim in enumerate(self.dims):
-            if not self_dim.is_bra:
-                continue
-            for other_axis, other_dim in enumerate(other.dims):
-                if not other_dim.is_ket:
-                    continue
-                if self_dim.space != other_dim.space:
-                    continue
-                self_dot_axes.append(self_axis)
-                other_dot_axes.append(other_axis)
-                break
+            # KetSpace ignored
+            if isinstance(self_dim, BraSpace):
+                try:
+                    other_axis = other.dims.index(self_dim.ct)
+                    self_dot_axes.append(self_axis)
+                    other_dot_axes.append(other_axis)
+                except ValueError:
+                    pass
+            elif isinstance(self_dim, NumSpace):
+                try:
+                    other.dims.index(self_dim)
+                    raise NotImplementedError(f"Found batch dim {self_dim}. Not implemented matmul for batch dim!")
+                except ValueError:
+                    pass
 
         new_self_dims = [dim for axis, dim in enumerate(self.dims) if axis not in self_dot_axes]
         new_other_dims = [dim for axis, dim in enumerate(other.dims) if axis not in other_dot_axes]
@@ -314,7 +209,8 @@ class QTensor:
         if other == 0:
             return self
         if not isinstance(other, QTensor):
-            raise NotImplementedError
+            raise TypeError("QTensor can perform + and - only with matching QTensors or 0.")
+
         broadcast_self = self.broadcast(other.dims)
         broadcast_other = other.broadcast(self.dims)
 
@@ -327,13 +223,14 @@ class QTensor:
     def __radd__(self, other):
         if other == 0:
             return self
-        raise NotImplementedError()
+        raise TypeError("QTensor can perform + and - only with matching QTensors or 0.")
 
     def __sub__(self, other):
         if other == 0:
             return self
         if not isinstance(other, QTensor):
-            raise NotImplementedError
+            raise TypeError("QTensor can perform + and - only with matching QTensors or 0.")
+
         broadcast_self = self.broadcast(other.dims)
         broadcast_other = other.broadcast(self.dims)
 
@@ -346,28 +243,43 @@ class QTensor:
     def __rsub__(self, other):
         if other == 0:
             return -self
-        raise NotImplementedError()
+        raise TypeError("QTensor can perform + and - only with matching QTensors or 0.")
 
     def __mul__(self, other):
+        if isinstance(other, QTensor):
+            raise TypeError("Please use matmul operator \"@\" for QTensors.")
+        if len(np.shape(other)) > 0:
+            raise TypeError("QTensor can perform * and / only with a scalar.")
         new_dims = self.dims
         new_values = self.values * other
-        return QTensor(new_dims, new_values)
-
-    def __truediv__(self, other):
-        new_dims = self.dims
-        new_values = self.values / other
         return QTensor(new_dims, new_values)
 
     def __rmul__(self, other):
         return self * other
 
-    # other operations
+    def __truediv__(self, other):
+        if isinstance(other, QTensor):
+            raise TypeError("Please use matmul operator \"@\" for QTensors.")
+        if len(np.shape(other)) > 0:
+            raise TypeError("QTensor can perform * and / only with a scalar.")
+        new_dims = self.dims
+        new_values = self.values / other
+        return QTensor(new_dims, new_values)
+
+    # value operations
 
     def __float__(self):
         if len(self.dims) == 0:
             return np.abs(self.values)
-        else:
-            raise RuntimeError("Can not convert Tensor with rank>0 to float!")
+        raise ValueError("Can not convert Tensor with rank>0 to float!")
+
+    def numpy(self):
+        return self.values
+
+    # id operations
+
+    def __hash__(self):
+        return hash((self.dims, self.values))
 
     def __eq__(self, other):
         if self is other:
@@ -393,24 +305,3 @@ class QTensor:
 zero = QTensor([], np.zeros([], np.float))
 
 one = QTensor([], np.ones([], np.float))
-
-
-def KetVector(spaces: Iterable[HSpace], values):
-    ket_dims = [KetDimension(space) for space in spaces]
-    return QTensor(ket_dims, values)
-
-
-def BraVector(spaces: Iterable[HSpace], values):
-    bra_dims = [BraDimension(space) for space in spaces]
-    return QTensor(bra_dims, values)
-
-
-def Operator(spaces: Iterable[HSpace], values):
-    ket_dims = [KetDimension(space) for space in spaces]
-    bra_dims = [BraDimension(space) for space in spaces]
-    return QTensor(ket_dims + bra_dims, values)
-
-
-Ket = KetVector
-Bra = BraVector
-Op = Operator

@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 
-from bnk.reduce import ReducedHSpace
+from bnk.reduce import ReducedKetSpace
 from bnk.tensor import QTensor
 from bnk.utils import structured_iter, structured_map
 
@@ -347,7 +347,7 @@ def one_step_rk4(t, v, dt, dv):
 def unwrap(value: QTensor, operators, reduce=True, dtype=np.complex64):
     org_dims = value.dims
     if reduce:
-        reduction = ReducedHSpace.from_initial([value], [*structured_iter(operators)])
+        reduction = ReducedKetSpace.from_initial([value], [*structured_iter(operators)])
         value = reduction.reduce(value)
         operators = reduction.reduce(operators)
     else:

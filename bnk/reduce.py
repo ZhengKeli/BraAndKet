@@ -1,11 +1,13 @@
 from typing import Iterable
 
 import numpy as np
-from bnk.tensor import HSpace, QTensor, zero, one
+
+from bnk import KetSpace
+from bnk.tensor import QTensor, zero, one
 from bnk.utils import structured_iter, structured_map
 
 
-class ReducedHSpace(HSpace):
+class ReducedKetSpace(KetSpace):
     def __init__(self, org_eigenstates, name=None, key=None):
         super().__init__(len(org_eigenstates), name, key)
 
@@ -53,10 +55,10 @@ class ReducedHSpace(HSpace):
         for index in indices:
             eigenstate = one
             for i, dim in zip(index, all_psi.dims):
-                eigenstate @= dim.space.eigenstate(i)
+                eigenstate @= dim.eigenstate(i)
             eigenstates.append(eigenstate)
 
-        return ReducedHSpace(eigenstates, name, key)
+        return ReducedKetSpace(eigenstates, name, key)
 
     def org_eigenstate(self, index):
         return self.org_eigenstates[index]
