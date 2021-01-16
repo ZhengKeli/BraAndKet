@@ -1,7 +1,7 @@
 from .tensor import QTensor, one, zero
 
 
-def prod(*items):
+def prod(items):
     x = one
     for item in items:
         if isinstance(item, QTensor):
@@ -11,7 +11,7 @@ def prod(*items):
     return x
 
 
-def sum(*items):
+def sum(items):
     x = zero
     for item in items:
         x += item
