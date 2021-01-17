@@ -14,11 +14,6 @@ class Space(abc.ABC):
     def name(self):
         pass
 
-    @property
-    @abc.abstractmethod
-    def key(self):
-        pass
-
     def __repr__(self):
         name = hex(hash(self))[2:] if self.name is None else self.name
         return f"{type(self).__name__}(n={self.n},name={name})"
@@ -37,11 +32,10 @@ class Space(abc.ABC):
 
 
 class NumSpace(Space):
-    def __init__(self, n, name=None, key=None):
+    def __init__(self, n, name=None):
         super().__init__()
         self._n = n
         self._name = name
-        self._key = key
 
     @property
     def n(self):
@@ -50,10 +44,6 @@ class NumSpace(Space):
     @property
     def name(self):
         return self._name
-
-    @property
-    def key(self):
-        return self._key
 
 
 class HSpace(Space, abc.ABC):
@@ -91,11 +81,10 @@ class HSpace(Space, abc.ABC):
 
 
 class KetSpace(HSpace):
-    def __init__(self, n, name=None, key=None):
+    def __init__(self, n, name=None):
         super().__init__()
         self._n = n
         self._name = name
-        self._key = key
 
         self._eigenstates = np.eye(self.n, dtype=np.bool)
 
@@ -106,10 +95,6 @@ class KetSpace(HSpace):
     @property
     def name(self):
         return self._name
-
-    @property
-    def key(self):
-        return self._key
 
     @property
     def ct(self):
@@ -152,10 +137,6 @@ class BraSpace(HSpace):
     @property
     def name(self):
         return self._ket_space.name
-
-    @property
-    def key(self):
-        return self._ket_space.key
 
     @property
     def ct(self):

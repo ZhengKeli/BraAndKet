@@ -8,8 +8,8 @@ from bnk.utils import structured_iter, structured_map
 
 
 class ReducedKetSpace(KetSpace):
-    def __init__(self, org_eigenstates, name=None, key=None):
-        super().__init__(len(org_eigenstates), name, key)
+    def __init__(self, org_eigenstates, name=None):
+        super().__init__(len(org_eigenstates), name)
 
         org_eigenstates = tuple(org_eigenstates)
 
@@ -21,7 +21,7 @@ class ReducedKetSpace(KetSpace):
         self.transform = transform
 
     @staticmethod
-    def from_initial(initial: Iterable[QTensor], operators: Iterable[QTensor], name=None, key=None):
+    def from_initial(initial: Iterable[QTensor], operators: Iterable[QTensor], name=None):
         all_psi = zero
         for tensor in structured_iter(initial):
             if all(dim.is_ket for dim in tensor.dims):
@@ -58,7 +58,7 @@ class ReducedKetSpace(KetSpace):
                 eigenstate @= dim.eigenstate(i)
             eigenstates.append(eigenstate)
 
-        return ReducedKetSpace(eigenstates, name, key)
+        return ReducedKetSpace(eigenstates, name)
 
     def org_eigenstate(self, index):
         return self.org_eigenstates[index]

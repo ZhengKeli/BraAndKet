@@ -111,9 +111,9 @@ class QTensor:
             else:
                 oth_dims.append(dim)
 
-        oth_dims = tuple(sorted(oth_dims, key=lambda dm: (dm.key, -dm.n, dm.name)))
-        ket_dims = tuple(sorted(ket_dims, key=lambda dm: (dm.key, -dm.n, dm.name)))
-        bra_dims = tuple(sorted(bra_dims, key=lambda dm: (dm.key, -dm.n, dm.name)))
+        oth_dims = tuple(sorted(oth_dims, key=lambda dm: (-dm.n, dm.name, id(dm))))
+        ket_dims = tuple(sorted(ket_dims, key=lambda dm: (-dm.n, dm.name, id(dm))))
+        bra_dims = tuple(sorted(bra_dims, key=lambda dm: (-dm.n, dm.name, id(dm))))
 
         flattened_oth_dim = np.prod([dim.n for dim in oth_dims], dtype=int)
         flattened_ket_dim = np.prod([dim.n for dim in ket_dims], dtype=int)
