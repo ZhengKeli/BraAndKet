@@ -70,14 +70,11 @@ class HSpace(Space, abc.ABC):
     def identity(self, dtype=np.float32):
         pass
 
-    def projector(self, ket_index, bra_index=None, dtype=np.float32):
-        if bra_index is None:
-            bra_index = ket_index
+    def operator(self, ket_index, bra_index, dtype=np.float32):
         return self.ket.eigenstate(ket_index, dtype) @ self.bra.eigenstate(bra_index, dtype)
 
-    def symmetry(self, index1, index2=None, dtype=np.float32):
-        projector = self.projector(index1, index2, dtype)
-        return projector + projector.ct
+    def projector(self, index, dtype=np.float32):
+        return self.operator(index, index, dtype)
 
 
 class KetSpace(HSpace):
