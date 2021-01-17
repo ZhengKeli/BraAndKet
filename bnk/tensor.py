@@ -100,33 +100,33 @@ class QTensor:
         return tensor
 
     def flatten(self):
-        oth_dims = []
+        num_dims = []
         ket_dims = []
         bra_dims = []
         for dim in self.dims:
-            if dim.is_ket:
+            if isinstance(dim, KetSpace):
                 ket_dims.append(dim)
-            elif dim.is_bra:
+            elif isinstance(dim, BraSpace):
                 bra_dims.append(dim)
             else:
-                oth_dims.append(dim)
+                num_dims.append(dim)
 
-        oth_dims = tuple(sorted(oth_dims, key=lambda dm: (-dm.n, dm.name, id(dm))))
-        ket_dims = tuple(sorted(ket_dims, key=lambda dm: (-dm.n, dm.name, id(dm))))
-        bra_dims = tuple(sorted(bra_dims, key=lambda dm: (-dm.n, dm.name, id(dm))))
+        num_dims = tuple(sorted(num_dims, key=lambda dm: (dm.name, -dm.n, id(dm))))
+        ket_dims = tuple(sorted(ket_dims, key=lambda dm: (dm.name, -dm.n, id(dm))))
+        bra_dims = tuple(sorted(bra_dims, key=lambda dm: (dm.name, -dm.n, id(dm))))
 
-        flattened_oth_dim = np.prod([dim.n for dim in oth_dims], dtype=int)
+        flattened_num_dim = np.prod([dim.n for dim in num_dims], dtype=int)
         flattened_ket_dim = np.prod([dim.n for dim in ket_dims], dtype=int)
         flattened_bra_dim = np.prod([dim.n for dim in bra_dims], dtype=int)
 
-        if flattened_oth_dim == 1:
+        if flattened_num_dim == 1:
             flattened_dims = ket_dims, bra_dims
             flattened_shape = [flattened_ket_dim, flattened_bra_dim]
         else:
-            flattened_dims = oth_dims, ket_dims, bra_dims
-            flattened_shape = [flattened_oth_dim, flattened_ket_dim, flattened_bra_dim]
+            flattened_dims = num_dims, ket_dims, bra_dims
+            flattened_shape = [flattened_num_dim, flattened_ket_dim, flattened_bra_dim]
 
-        transposed = self.transposed([*oth_dims, *ket_dims, *bra_dims])
+        transposed = self.transposed([*num_dims, *ket_dims, *bra_dims])
         flattened_values = np.reshape(transposed.values, flattened_shape)
 
         return flattened_dims, flattened_values
