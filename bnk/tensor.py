@@ -278,9 +278,6 @@ class QTensor:
 
     # id operations
 
-    def __hash__(self):
-        return hash((self.dims, self.values))
-
     def __eq__(self, other):
         if self is other:
             return True
