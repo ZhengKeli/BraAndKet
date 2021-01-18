@@ -24,16 +24,16 @@ class ReducedKetSpace(KetSpace):
     def from_initial(initial: Iterable[QTensor], operators: Iterable[QTensor], name=None):
         all_psi = zero
         for tensor in structured_iter(initial):
-            if all(dim.is_ket for dim in tensor.dims):
+            if all(space.is_ket for space in tensor.spaces):
                 psi = to_bool(tensor)
-            elif all(dim.is_ket for dim in tensor.dims):
+            elif all(space.is_ket for space in tensor.spaces):
                 psi = to_bool(tensor.ct)
             else:
                 rho = to_bool(tensor)
-                (ket_dims, bra_dims), flat_values = rho.flatten()
-                if not all(ket_dim == bra_dim.ct for ket_dim, bra_dim in zip(ket_dims, bra_dims)):
+                (ket_spaces, bra_spaces), flat_values = rho.flatten()
+                if not all(ket_space == bra_space.ct for ket_space, bra_space in zip(ket_spaces, bra_spaces)):
                     raise TypeError("the tensors in parameter initial should be either vector or density matrix.")
-                psi = QTensor.wrap(np.any(flat_values, axis=-1), (ket_dims,))
+                psi = QTensor.wrap(np.any(flat_values, axis=-1), (ket_spaces,))
             all_psi += psi
         all_psi = to_bool(all_psi)
 
@@ -54,8 +54,8 @@ class ReducedKetSpace(KetSpace):
         eigenstates = []
         for index in indices:
             eigenstate = one
-            for i, dim in zip(index, all_psi.dims):
-                eigenstate @= dim.eigenstate(i)
+            for i, space in zip(index, all_psi.spaces):
+                eigenstate @= space.eigenstate(i)
             eigenstates.append(eigenstate)
 
         return ReducedKetSpace(eigenstates, name)
@@ -66,10 +66,10 @@ class ReducedKetSpace(KetSpace):
     def _reduce_one(self, tensor: QTensor):
         has_ket = False
         has_bra = False
-        for dim in tensor.dims:
-            if dim.is_ket:
+        for space in tensor.spaces:
+            if space.is_ket:
                 has_ket = True
-            elif dim.is_bra:
+            elif space.is_bra:
                 has_bra = True
         if has_ket:
             tensor = self.transform @ tensor
@@ -83,10 +83,10 @@ class ReducedKetSpace(KetSpace):
     def _inflate_one(self, tensor: QTensor):
         has_ket = False
         has_bra = False
-        for dim in tensor.dims:
-            if dim.is_ket:
+        for space in tensor.spaces:
+            if space.is_ket:
                 has_ket = True
-            elif dim.is_bra:
+            elif space.is_bra:
                 has_bra = True
         if has_ket:
             tensor = self.transform.ct @ tensor
@@ -101,4 +101,4 @@ class ReducedKetSpace(KetSpace):
 # utils
 
 def to_bool(t: QTensor):
-    return QTensor(t.dims, t.values != 0)
+    return QTensor(t.spaces, t.values != 0)

@@ -345,32 +345,32 @@ def one_step_rk4(t, v, dt, dv):
 # utils: wrap & unwrap
 
 def unwrap(value: QTensor, operators, reduce=True, dtype=np.complex64):
-    org_dims = value.dims
+    org_spaces = value.spaces
     if reduce:
         reduction = ReducedKetSpace.from_initial([value], [*structured_iter(operators)])
         value = reduction.reduce(value)
         operators = reduction.reduce(operators)
     else:
         reduction = None
-        operators = structured_map(operators, lambda op: op.broadcast(value.dims))
+        operators = structured_map(operators, lambda op: op.broadcast(value.spaces))
 
-    flat_dims, value = value.flatten()
+    flat_spaces, value = value.flatten()
     value = np.asarray(value, dtype=dtype)
 
     operators = structured_map(operators, lambda op: np.asarray(op.flattened_values, dtype=dtype))
 
-    wrapping = org_dims, flat_dims, reduction
+    wrapping = org_spaces, flat_spaces, reduction
     return value, operators, wrapping
 
 
 def wrap(value, wrapping) -> QTensor:
-    org_dims, flat_dims, reduction = wrapping
+    org_spaces, flat_spaces, reduction = wrapping
     if reduction:
-        value = QTensor.wrap(value, flat_dims)
+        value = QTensor.wrap(value, flat_spaces)
         value = reduction.inflate(value)
-        value = value.transposed(org_dims)
+        value = value.transposed(org_spaces)
     else:
-        value = QTensor.wrap(value, flat_dims, org_dims)
+        value = QTensor.wrap(value, flat_spaces, org_spaces)
     return value
 
 
