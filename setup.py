@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.5.0",
     author="Zheng Keli",
     author_email="zhengkeli2009@126.com",
-    description="A library for a convenient representation of discrete quantum systems and their evolution.",
+    description="BraAndKet is a library for numeral calculations of discrete quantum systems.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ZhengKeli/BraAndKet",
