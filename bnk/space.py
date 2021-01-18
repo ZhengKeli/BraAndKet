@@ -1,5 +1,5 @@
 import abc
-
+import warnings
 import numpy as np
 
 
@@ -50,31 +50,26 @@ class HSpace(Space, abc.ABC):
     @property
     @abc.abstractmethod
     def ct(self):
+        """
+        :rtype: HSpace
+        """
         pass
 
     @property
     @abc.abstractmethod
     def ket(self):
+        """
+        :rtype: KetSpace
+        """
         pass
 
     @property
     @abc.abstractmethod
     def bra(self):
+        """
+        :rtype: BraSpace
+        """
         pass
-
-    @abc.abstractmethod
-    def eigenstate(self, index, dtype=np.float32):
-        pass
-
-    @abc.abstractmethod
-    def identity(self, dtype=np.float32):
-        pass
-
-    def operator(self, ket_index, bra_index, dtype=np.float32):
-        return self.ket.eigenstate(ket_index, dtype) @ self.bra.eigenstate(bra_index, dtype)
-
-    def projector(self, index, dtype=np.float32):
-        return self.operator(index, index, dtype)
 
 
 class KetSpace(HSpace):
@@ -84,6 +79,7 @@ class KetSpace(HSpace):
         self._name = name
 
         self._eigenstates = np.eye(self.n, dtype=np.bool)
+        self._bra = BraSpace(self)
 
     @property
     def n(self):
@@ -95,7 +91,7 @@ class KetSpace(HSpace):
 
     @property
     def ct(self):
-        return BraSpace(self)
+        return self._bra
 
     @property
     def ket(self):
@@ -103,7 +99,7 @@ class KetSpace(HSpace):
 
     @property
     def bra(self):
-        return self.ct
+        return self._bra
 
     def eigenstate(self, index, dtype=np.float32):
         from bnk.tensor import QTensor
@@ -117,44 +113,49 @@ class KetSpace(HSpace):
         values = np.asarray(values, dtype=dtype)
         return QTensor([self, self.ct], values)
 
+    def operator(self, ket_index, bra_index, dtype=np.float32):
+        return self.eigenstate(ket_index, dtype) @ self.eigenstate(bra_index, dtype).ct
+
+    def projector(self, index, dtype=np.float32):
+        return self.operator(index, index, dtype)
+
 
 class BraSpace(HSpace):
-    def __init__(self, ket_space: KetSpace):
+    def __new__(cls, ket: KetSpace):
+        try:
+            bra = ket.bra
+            warnings.warn(
+                "Please avoid creating a BraSpace yourself. "
+                "To get a BraSpace, use .ct or .bra property on KetSpace instance.",
+                category=UserWarning, stacklevel=2)
+            return bra
+        except AttributeError:
+            return super().__new__(cls)
+
+    def __init__(self, ket: KetSpace):
         super().__init__()
 
-        if not isinstance(ket_space, KetSpace):
-            raise TypeError("The parameter must be a KetSpace instance!")
+        if not isinstance(ket, KetSpace):
+            raise TypeError("The parameter ket must be a KetSpace instance!")
 
-        self._ket_space = ket_space
+        self._ket = ket
 
     @property
     def n(self):
-        return self._ket_space.n
+        return self._ket.n
 
     @property
     def name(self):
-        return self._ket_space.name
+        return self._ket.name
 
     @property
     def ct(self):
-        return self._ket_space
+        return self._ket
 
     @property
     def ket(self):
-        return self.ct
+        return self._ket
 
     @property
     def bra(self):
         return self
-
-    def eigenstate(self, index, dtype=np.float32):
-        return self.ct.eigenstate(index, dtype).ct
-
-    def identity(self, dtype=np.float32):
-        return self.ct.identity(dtype)
-
-    def __hash__(self):
-        return hash(('bra', self.ct))
-
-    def __eq__(self, other):
-        return isinstance(other, BraSpace) and self.ct == other.ct

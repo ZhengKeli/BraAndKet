@@ -68,7 +68,7 @@ class QTensor:
                 if broadcast_dim.ct not in broadcast_dims:
                     raise TypeError(f"Can not broadcast unpaired dimension {broadcast_dim}.")
                 broadcast_dims.remove(broadcast_dim.ct)
-                broadcast_identity @= broadcast_dim.identity(self.dtype)
+                broadcast_identity @= broadcast_dim.ket.identity(self.dtype)
                 continue
 
             raise TypeError(f"Unsupported custom type {type(broadcast_dim)} as a dimension type.")
