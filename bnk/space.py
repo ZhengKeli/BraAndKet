@@ -14,10 +14,6 @@ class Space(abc.ABC):
     def name(self):
         pass
 
-    def __repr__(self):
-        name = hex(hash(self))[2:] if self.name is None else self.name
-        return f"{type(self).__name__}(n={self.n},name={name})"
-
     @property
     def is_ket(self):
         return isinstance(self, KetSpace)
@@ -44,6 +40,12 @@ class NumSpace(Space):
     @property
     def name(self):
         return self._name
+
+    def __repr__(self):
+        if self.name is None:
+            return f"{NumSpace.__name__}({self.n})"
+        else:
+            return f"{NumSpace.__name__}({self.n}, name={self.name})"
 
 
 class HSpace(Space, abc.ABC):
@@ -88,6 +90,12 @@ class KetSpace(HSpace):
     @property
     def name(self):
         return self._name
+
+    def __repr__(self):
+        if self.name is None:
+            return f"{KetSpace.__name__}({self.n})"
+        else:
+            return f"{KetSpace.__name__}({self.n}, name={self.name})"
 
     @property
     def ct(self):
@@ -147,6 +155,12 @@ class BraSpace(HSpace):
     @property
     def name(self):
         return self._ket.name
+
+    def __repr__(self):
+        if self.name is None:
+            return f"{BraSpace.__name__}({self.n})"
+        else:
+            return f"{BraSpace.__name__}({self.n}, name={self.name})"
 
     @property
     def ct(self):

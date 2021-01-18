@@ -32,8 +32,49 @@ class QTensor:
         return self._values
 
     @property
+    def shape(self):
+        return self.values.shape
+
+    @property
     def dtype(self):
         return self.values.dtype
+
+    def __repr__(self):
+        return f"QTensor(spaces={self.spaces}, values={self.values})"
+
+    # values operations
+
+    def __float__(self):
+        if len(self.spaces) == 0:
+            return np.abs(self.values)
+        raise ValueError("Can not convert Tensor with rank>0 to float!")
+
+    def numpy(self):
+        return self.values
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if other == 0:
+            return len(self.spaces) == 0 and self.values == 0
+        if not isinstance(other, QTensor):
+            return False
+
+        if self.spaces == other.spaces:
+            if self.values is other.values:
+                return True
+            if np.all(self.values == other.values):
+                return True
+
+        try:
+            broadcast_self = self.broadcast(other.spaces)
+            broadcast_other = other.broadcast(self.spaces)
+            broadcast_other = broadcast_other.transposed(broadcast_self.spaces)
+            return np.all(broadcast_self.values == broadcast_other.values)
+        except ValueError:
+            return False
+        except TypeError:
+            return False
 
     # space operations
 
@@ -265,38 +306,6 @@ class QTensor:
         new_spaces = self.spaces
         new_values = self.values / other
         return QTensor(new_spaces, new_values)
-
-    # value operations
-
-    def __float__(self):
-        if len(self.spaces) == 0:
-            return np.abs(self.values)
-        raise ValueError("Can not convert Tensor with rank>0 to float!")
-
-    def numpy(self):
-        return self.values
-
-    # id operations
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-        if other == 0:
-            return len(self.spaces) == 0 and self.values == 0
-        if not isinstance(other, QTensor):
-            return False
-
-        if self.spaces == other.spaces:
-            if self.values is other.values:
-                return True
-            if np.all(self.values == other.values):
-                return True
-
-        broadcast_self = self.broadcast(other.spaces)
-        broadcast_other = other.broadcast(self.spaces)
-        broadcast_other = broadcast_other.transposed(broadcast_self.spaces)
-
-        return np.all(broadcast_self.values == broadcast_other.values)
 
 
 zero = QTensor([], np.zeros([], np.float))
