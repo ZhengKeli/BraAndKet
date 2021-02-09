@@ -26,7 +26,7 @@ class ReducedKetSpace(KetSpace):
         for tensor in structured_iter(initial):
             if all(space.is_ket for space in tensor.spaces):
                 psi = to_bool(tensor)
-            elif all(space.is_ket for space in tensor.spaces):
+            elif all(space.is_bra for space in tensor.spaces):
                 psi = to_bool(tensor.ct)
             else:
                 rho = to_bool(tensor)
