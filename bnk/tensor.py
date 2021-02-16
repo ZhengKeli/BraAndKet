@@ -2,7 +2,7 @@ from typing import Iterable
 
 import numpy as np
 
-from bnk.space import Space, HSpace, NumSpace, BraSpace, KetSpace
+from .space import Space, HSpace, NumSpace, BraSpace, KetSpace
 
 
 class QTensor:

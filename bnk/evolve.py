@@ -1,9 +1,9 @@
 import numpy as np
 from tqdm import tqdm
 
-from bnk.reduce import ReducedKetSpace
-from bnk.tensor import QTensor
-from bnk.utils import structured_iter, structured_map
+from .reduce import ReducedKetSpace
+from .tensor import QTensor
+from .utils import structured_iter, structured_map
 
 
 # evolve functions
