@@ -9,31 +9,35 @@ from bnk.utils import structured_iter, structured_map
 # evolve functions
 
 def schrodinger_evolve(
-        t, psi, hmt, hb, span, dt=None,
+        t, psi_or_rho, hmt, hb, span, dt=None,
         dlt=None, log_func=None,
         reduce=True, method=None, rectify=True,
         verbose=True):
     hmt = hmt if isinstance(hmt, QTensor) else sum(hmt)
+    is_rho = psi_or_rho.is_rho
 
     # unwrap
-    psi, hmt, wrapping = unwrap(psi, hmt, reduce=reduce)
+    psi_or_rho, hmt, wrapping = unwrap(psi_or_rho, hmt, reduce=reduce)
 
     # compute
-    evolve_func = get_schrodinger_evolve_func(hmt, hb, dt, method)
+    evolve_func = get_schrodinger_evolve_func(hmt, hb, dt, method, is_rho)
 
-    evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
+    if not is_rho:
+        evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
+    else:
+        evolve_func = get_rectifying_rho_evolve_func(evolve_func, rectify)
 
     log_func = get_wrapping_log_func(log_func, wrapping)
 
     evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
 
-    psi = evolve_func(t, psi, span)
+    psi_or_rho = evolve_func(t, psi_or_rho, span)
     t = t + span
 
     # wrap
-    psi = wrap(psi, wrapping)
+    psi_or_rho = wrap(psi_or_rho, wrapping)
 
-    return t, psi
+    return t, psi_or_rho
 
 
 def lindblad_evolve(
@@ -67,42 +71,52 @@ def lindblad_evolve(
 
 
 def dynamic_schrodinger_evolve(
-        t, psi, hmt, k_func, hb, span, dt,
+        t, psi_or_rho, hmt, k_func, hb, span, dt,
         dlt=None, log_func=None,
         reduce=True, method=None, rectify=True,
         verbose=True):
     hmt_list = [hmt] if isinstance(hmt, QTensor) else list(hmt)
     hmt_count = len(hmt_list)
+    is_rho = psi_or_rho.is_rho
 
     # unwrap
-    psi, hmt_list, wrapping = unwrap(psi, hmt_list, reduce=reduce)
+    psi_or_rho, hmt_list, wrapping = unwrap(psi_or_rho, hmt_list, reduce=reduce)
 
     # prepare
     hmt_list = np.stack(hmt_list, -1)
 
     # compute
-    def dv(t, psi):
-        k_list = np.reshape(k_func(t), [hmt_count])
-        hmt = np.sum(hmt_list * k_list, -1)
-        return -1j / hb * (hmt @ psi)
+    if not is_rho:
+        def dv(t, psi):
+            k_list = np.reshape(k_func(t), [hmt_count])
+            hmt = np.sum(hmt_list * k_list, -1)
+            return -1j / hb * (hmt @ psi)
+    else:
+        def dv(t, rho):
+            k_list = np.reshape(k_func(t), [hmt_count])
+            hmt = np.sum(hmt_list * k_list, -1)
+            return -1j / hb * (hmt @ rho @ hmt)
 
     stepping_kernel = get_differential_stepping_kernel(dv, method)
 
     evolve_func = get_stepping_evolve_func(stepping_kernel, dt)
 
-    evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
+    if not is_rho:
+        evolve_func = get_rectifying_psi_evolve_func(evolve_func, rectify)
+    else:
+        evolve_func = get_rectifying_rho_evolve_func(evolve_func, rectify)
 
     log_func = get_wrapping_log_func(log_func, wrapping)
 
     evolve_func = get_logging_evolve_func(evolve_func, log_func, dlt, verbose)
 
-    psi = evolve_func(t, psi, span)
+    psi_or_rho = evolve_func(t, psi_or_rho, span)
     t = t + span
 
     # wrap
-    psi = wrap(psi, wrapping)
+    psi_or_rho = wrap(psi_or_rho, wrapping)
 
-    return t, psi
+    return t, psi_or_rho
 
 
 def dynamic_lindblad_evolve(
@@ -159,7 +173,7 @@ def dynamic_lindblad_evolve(
 
 # kernels: schrodinger
 
-def get_schrodinger_evolve_func(hmt, hb, dt, method):
+def get_schrodinger_evolve_func(hmt, hb, dt, method, is_rho):
     if method is None:
         try:
             from scipy.linalg import expm
@@ -170,15 +184,27 @@ def get_schrodinger_evolve_func(hmt, hb, dt, method):
         method = str(method).lower()
 
     if method == 'pade':
-        def evolve_func(_, psi, span):
-            return schrodinger_kernel_pade(psi, hmt, hb, span)
+        if not is_rho:
+            def evolve_func(_, psi, span):
+                return schrodinger_kernel_pade(psi, hmt, hb, span)
+        else:
+            def evolve_func(_, rho, span):
+                return schrodinger_kernel_pade_rho(rho, hmt, hb, span)
     else:
         if method == 'euler':
-            def stepping_kernel(_, psi, n, dt):
-                return schrodinger_kernel_euler(psi, hmt, hb, dt, n)
+            if not is_rho:
+                def stepping_kernel(_, psi, n, dt):
+                    return schrodinger_kernel_euler(psi, hmt, hb, dt, n)
+            else:
+                def stepping_kernel(_, rho, n, dt):
+                    return schrodinger_kernel_euler_rho(rho, hmt, hb, dt, n)
         elif method == 'rk4':
-            def stepping_kernel(_, psi, n, dt):
-                return schrodinger_kernel_rk4(psi, hmt, hb, dt, n)
+            if not is_rho:
+                def stepping_kernel(_, psi, n, dt):
+                    return schrodinger_kernel_rk4(psi, hmt, hb, dt, n)
+            else:
+                def stepping_kernel(_, rho, n, dt):
+                    return schrodinger_kernel_rk4_rho(rho, hmt, hb, dt, n)
         else:
             raise TypeError(f"Unsupported method {method}!")
 
@@ -191,8 +217,17 @@ def schrodinger_kernel_pade(
         hmt: np.ndarray,
         hb, span):
     from scipy.linalg import expm
-    psi = expm((span / 1j / hb) * hmt) @ psi
-    return psi
+    op = expm((span / 1j / hb) * hmt)
+    return op @ psi
+
+
+def schrodinger_kernel_pade_rho(
+        rho: np.ndarray,
+        hmt: np.ndarray,
+        hb, span):
+    from scipy.linalg import expm
+    op = expm((span / 1j / hb) * hmt)
+    return op @ rho @ op
 
 
 def schrodinger_kernel_euler(
@@ -203,6 +238,16 @@ def schrodinger_kernel_euler(
     for i in range(n):
         psi += kt * (hmt @ psi)
     return psi
+
+
+def schrodinger_kernel_euler_rho(
+        rho: np.ndarray,
+        hmt: np.ndarray,
+        hb, dt, n):
+    kt = (dt / 1j / hb)
+    for i in range(n):
+        rho += kt * (hmt @ rho @ hmt)
+    return rho
 
 
 def schrodinger_kernel_rk4(
@@ -218,6 +263,21 @@ def schrodinger_kernel_rk4(
         k4 = k * (hmt @ (psi + dt * k3))
         psi += dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
     return psi
+
+
+def schrodinger_kernel_rk4_rho(
+        rho: np.ndarray,
+        hmt: np.ndarray,
+        hb, dt, n):
+    k = -1j / hb
+    dt2 = dt / 2.0
+    for i in range(n):
+        k1 = k * (hmt @ rho @ hmt)
+        k2 = k * (hmt @ (rho + dt2 * k1) @ hmt)
+        k3 = k * (hmt @ (rho + dt2 * k2) @ hmt)
+        k4 = k * (hmt @ (rho + dt * k3) @ hmt)
+        rho += dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+    return rho
 
 
 # kernels: lindblad

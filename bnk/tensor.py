@@ -307,6 +307,25 @@ class QTensor:
         new_values = self.values / other
         return QTensor(new_spaces, new_values)
 
+    # utils
+
+    @property
+    def is_psi(self):
+        return all(space.is_ket for space in self.spaces)
+
+    @property
+    def is_rho(self):
+        spaces = set(self.spaces)
+        while spaces:
+            space = spaces.pop()
+            if isinstance(space, NumSpace):
+                continue
+            if isinstance(space, HSpace):
+                if space.ct not in spaces:
+                    return False
+                spaces.remove(space.ct)
+        return True
+
 
 zero = QTensor([], np.zeros([], np.float))
 
