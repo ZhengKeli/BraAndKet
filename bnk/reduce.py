@@ -24,16 +24,17 @@ class ReducedKetSpace(KetSpace):
     def from_initial(initial: Iterable[QTensor], operators: Iterable[QTensor], name=None):
         all_psi = zero
         for tensor in structured_iter(initial):
-            if all(space.is_ket for space in tensor.spaces):
+            tensor: QTensor
+            if tensor.is_psi:
                 psi = to_bool(tensor)
-            elif all(space.is_bra for space in tensor.spaces):
+            elif tensor.ct.is_psi:
                 psi = to_bool(tensor.ct)
-            else:
+            elif tensor.is_rho:
                 rho = to_bool(tensor)
-                (ket_spaces, bra_spaces), flat_values = rho.flatten()
-                if not all(ket_space == bra_space.ct for ket_space, bra_space in zip(ket_spaces, bra_spaces)):
-                    raise TypeError("the tensors in parameter initial should be either vector or density matrix.")
+                (ket_spaces, _), flat_values = rho.flatten()
                 psi = QTensor.wrap(np.any(flat_values, axis=-1), (ket_spaces,))
+            else:
+                raise TypeError("the tensors in parameter initial should be either vector or density matrix.")
             all_psi += psi
         all_psi = to_bool(all_psi)
 
