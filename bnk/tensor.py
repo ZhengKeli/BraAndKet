@@ -152,9 +152,9 @@ class QTensor:
             else:
                 num_spaces.append(space)
 
-        num_spaces = tuple(sorted(num_spaces, key=lambda sp: (sp.name, -sp.n, id(sp))))
-        ket_spaces = tuple(sorted(ket_spaces, key=lambda sp: (sp.name, -sp.n, id(sp))))
-        bra_spaces = tuple(sorted(bra_spaces, key=lambda sp: (sp.name, -sp.n, id(sp))))
+        num_spaces = tuple(sorted(num_spaces, key=lambda sp: (0, sp.name, -sp.n, id(sp))))
+        ket_spaces = tuple(sorted(ket_spaces, key=lambda sp: (1, sp.name, -sp.n, id(sp))))
+        bra_spaces = tuple(sorted(bra_spaces, key=lambda sp: (2, sp.name, -sp.n, id(sp.ket))))
 
         flattened_num_space = np.prod([space.n for space in num_spaces], dtype=int)
         flattened_ket_space = np.prod([space.n for space in ket_spaces], dtype=int)
