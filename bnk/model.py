@@ -23,13 +23,7 @@ class QModel:
                 span, dt,
                 *args, **kwargs)
         else:
-            if psi_or_rho.is_psi:
-                rho = psi_or_rho @ psi_or_rho.ct
-            elif psi_or_rho.is_rho:
-                rho = psi_or_rho
-            else:
-                raise ValueError("The parameter psi_or_rho must be a pure state vector or a density matrix.")
-
+            rho = psi_or_rho.as_rho()
             return lindblad_evolve(
                 t, rho,
                 self.hmt, self.deco, self.gamma, self.hb,

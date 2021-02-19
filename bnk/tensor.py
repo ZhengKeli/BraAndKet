@@ -42,40 +42,6 @@ class QTensor:
     def __repr__(self):
         return f"QTensor(spaces={self.spaces}, values={self.values})"
 
-    # values operations
-
-    def __float__(self):
-        if len(self.spaces) == 0:
-            return float(np.abs(self.values))
-        raise ValueError("Can not convert Tensor with rank>0 to float!")
-
-    def numpy(self):
-        return self.values
-
-    def __eq__(self, other):
-        if self is other:
-            return True
-        if other == 0:
-            return len(self.spaces) == 0 and self.values == 0
-        if not isinstance(other, QTensor):
-            return False
-
-        if self.spaces == other.spaces:
-            if self.values is other.values:
-                return True
-            if np.all(self.values == other.values):
-                return True
-
-        try:
-            broadcast_self = self.broadcast(other.spaces)
-            broadcast_other = other.broadcast(self.spaces)
-            broadcast_other = broadcast_other.transposed(broadcast_self.spaces)
-            return np.all(broadcast_self.values == broadcast_other.values)
-        except ValueError:
-            return False
-        except TypeError:
-            return False
-
     # space operations
 
     def transposed(self, new_spaces: Iterable[Space]):
@@ -310,7 +276,7 @@ class QTensor:
         new_values = self.values / other
         return QTensor(new_spaces, new_values)
 
-    # utils
+    # values operations
 
     @property
     def is_psi(self):
@@ -328,6 +294,64 @@ class QTensor:
                     return False
                 spaces.remove(space.ct)
         return True
+
+    def as_psi(self, normalize=True, raises=True):
+        if self.is_psi:
+            psi = self
+        elif raises:
+            raise ValueError("This tensor can't be used as pure state vector!")
+        else:
+            return None
+
+        if normalize:
+            psi /= np.sqrt(np.sum(np.square(self.values)))
+
+        return psi
+
+    def as_rho(self, normalize=True, raises=True):
+        if self.is_rho:
+            rho = self
+        elif raises:
+            raise ValueError("This tensor can't be used as density matrix!")
+        else:
+            return None
+
+        if normalize:
+            rho /= float(rho.trace())
+
+        return rho
+
+    def numpy(self):
+        return self.values
+
+    def __float__(self):
+        if len(self.spaces) == 0:
+            return float(np.abs(self.values))
+        raise ValueError("Can not convert Tensor with rank>0 to float!")
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if other == 0:
+            return len(self.spaces) == 0 and self.values == 0
+        if not isinstance(other, QTensor):
+            return False
+
+        if self.spaces == other.spaces:
+            if self.values is other.values:
+                return True
+            if np.all(self.values == other.values):
+                return True
+
+        try:
+            broadcast_self = self.broadcast(other.spaces)
+            broadcast_other = other.broadcast(self.spaces)
+            broadcast_other = broadcast_other.transposed(broadcast_self.spaces)
+            return np.all(broadcast_self.values == broadcast_other.values)
+        except ValueError:
+            return False
+        except TypeError:
+            return False
 
 
 zero = QTensor([], np.zeros([], np.float))
