@@ -191,8 +191,11 @@ class QTensor:
 
         traced = self
         for space in spaces:
-            ket_axis = traced.spaces.index(space.ket)
-            bra_axis = traced.spaces.index(space.bra)
+            if not isinstance(space, KetSpace):
+                continue
+            ket_space = space
+            ket_axis = traced.spaces.index(ket_space)
+            bra_axis = traced.spaces.index(ket_space.ct)
             new_space = tuple(space for axis, space in enumerate(traced.spaces) if axis not in (ket_axis, bra_axis))
             new_values = np.trace(traced.values, axis1=ket_axis, axis2=bra_axis)
             traced = QTensor(new_space, new_values)
