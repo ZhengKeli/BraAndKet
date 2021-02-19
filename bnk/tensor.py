@@ -46,7 +46,7 @@ class QTensor:
 
     def __float__(self):
         if len(self.spaces) == 0:
-            return np.abs(self.values)
+            return float(np.abs(self.values))
         raise ValueError("Can not convert Tensor with rank>0 to float!")
 
     def numpy(self):
