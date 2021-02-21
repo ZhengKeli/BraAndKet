@@ -1,9 +1,10 @@
 from .tensor import QTensor, one, zero
+from .utils import structured_iter
 
 
-def prod(items):
+def prod(*items):
     x = one
-    for item in items:
+    for item in structured_iter(items):
         if isinstance(item, QTensor):
             x = x @ item
         else:
@@ -11,8 +12,8 @@ def prod(items):
     return x
 
 
-def sum(items):
+def sum(*items):
     x = zero
-    for item in items:
+    for item in structured_iter(items):
         x += item
     return x
