@@ -280,7 +280,24 @@ class QTensor:
 
     @property
     def is_psi(self):
-        return all(space.is_ket for space in self.spaces)
+        for space in self.spaces:
+            if isinstance(space, NumSpace):
+                continue
+            elif isinstance(space, KetSpace):
+                continue
+            else:
+                return False
+        return True
+
+    def as_psi(self, normalize=True):
+        if not self.is_psi:
+            raise TypeError("This tensor is not a ket vector!")
+        psi = self
+
+        if normalize:
+            psi /= float(psi.ct @ psi)
+
+        return psi
 
     @property
     def is_rho(self):
@@ -295,26 +312,10 @@ class QTensor:
                 spaces.remove(space.ct)
         return True
 
-    def as_psi(self, normalize=True, raises=True):
-        if self.is_psi:
-            psi = self
-        elif raises:
-            raise ValueError("This tensor can't be used as pure state vector!")
-        else:
-            return None
-
-        if normalize:
-            psi /= np.sqrt(np.sum(np.square(self.values)))
-
-        return psi
-
-    def as_rho(self, normalize=True, raises=True):
-        if self.is_rho:
-            rho = self
-        elif raises:
-            raise ValueError("This tensor can't be used as density matrix!")
-        else:
-            return None
+    def as_rho(self, normalize=True):
+        if not self.is_rho:
+            raise ValueError("This tensor is not a density matrix!")
+        rho = self
 
         if normalize:
             rho /= float(rho.trace())
