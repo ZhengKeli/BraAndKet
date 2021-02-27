@@ -1,7 +1,11 @@
 def structured_iter(structure):
-    if isinstance(structure, (list, tuple)):
-        for item in structure:
-            for sub_item in structured_iter(item):
+    try:
+        structure_iter = iter(structure)
+    except TypeError:
+        structure_iter = None
+    if structure_iter is not None:
+        for structure_item in structure_iter:
+            for sub_item in structured_iter(structure_item):
                 yield sub_item
     else:
         yield structure
