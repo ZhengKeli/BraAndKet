@@ -17,3 +17,8 @@ def sum(*items):
     for item in structured_iter(items):
         x += item
     return x
+
+
+def sum_ct(*items):
+    s = sum(*items)
+    return s + s.ct
