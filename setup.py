@@ -5,7 +5,7 @@ with open("README.md", "r") as file:
 
 setuptools.setup(
     name="BraAndKet",
-    version="0.6.2",
+    version="0.6.3",
     author="Zheng Keli",
     author_email="zhengkeli2009@126.com",
     description="BraAndKet is a library for numeral calculations of discrete quantum systems.",
