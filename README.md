@@ -1,5 +1,7 @@
 # BraAndKet
 
+[![License](https://img.shields.io/github/license/ZhengKeli/BraAndKet)](https://github.com/ZhengKeli/BraAndKet/blob/master/LICENSE)
+
 BraAndKet is a library for numeral calculations of discrete quantum systems.
 
 # Quickstart
