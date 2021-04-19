@@ -7,7 +7,7 @@ from .tensor import QTensor, zero, one
 from .utils import structured_iter, structured_map
 
 
-class ReducedKetSpace(KetSpace):
+class PrunedKetSpace(KetSpace):
     def __init__(self, org_eigenstates, name=None):
         super().__init__(len(org_eigenstates), name)
 
@@ -59,7 +59,7 @@ class ReducedKetSpace(KetSpace):
                 eigenstate @= space.eigenstate(i)
             eigenstates.append(eigenstate)
 
-        return ReducedKetSpace(eigenstates, name)
+        return PrunedKetSpace(eigenstates, name)
 
     def org_eigenstate(self, index):
         return self.org_eigenstates[index]

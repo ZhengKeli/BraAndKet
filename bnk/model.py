@@ -4,7 +4,7 @@ import numpy as np
 
 from .tensor import QTensor
 from .evolve import lindblad_evolve, schrodinger_evolve
-from .reduce import ReducedKetSpace
+from .pruning import PrunedKetSpace
 
 
 class QModel:
@@ -40,7 +40,7 @@ class ReducedQModel(QModel):
         operators = [org_model.hmt]
         if org_model.deco is not None:
             operators.append(org_model.deco)
-        self.space = ReducedKetSpace.from_initial(initial, operators)
+        self.space = PrunedKetSpace.from_initial(initial, operators)
 
         hmt = self.reduce(org_model.hmt)
         if org_model.deco is not None:
