@@ -1,5 +1,6 @@
 import abc
 import warnings
+
 import numpy as np
 
 
@@ -110,16 +111,16 @@ class KetSpace(HSpace):
         return self._bra
 
     def eigenstate(self, index, dtype=np.float32):
-        from bnk.tensor import QTensor
+        from .tensor import NumpyQTensor
         values = self._eigenstates[index]
         values = np.asarray(values, dtype=dtype)
-        return QTensor([self], values)
+        return NumpyQTensor([self], values)
 
     def identity(self, dtype=np.float32):
-        from bnk.tensor import QTensor
+        from .tensor import NumpyQTensor
         values = self._eigenstates
         values = np.asarray(values, dtype=dtype)
-        return QTensor([self, self.ct], values)
+        return NumpyQTensor([self, self.ct], values)
 
     def operator(self, ket_index, bra_index, dtype=np.float32):
         return self.eigenstate(ket_index, dtype) @ self.eigenstate(bra_index, dtype).ct

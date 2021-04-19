@@ -3,7 +3,7 @@ from typing import Iterable
 import numpy as np
 
 from .space import KetSpace
-from .tensor import QTensor, zero, one
+from .tensor import QTensor, zero, one, NumpyQTensor
 from .utils import structured_iter, structured_map
 
 
@@ -102,4 +102,4 @@ class PrunedKetSpace(KetSpace):
 # utils
 
 def to_bool(t: QTensor):
-    return QTensor(t.spaces, t.values != 0)
+    return NumpyQTensor(t.spaces, t.values != 0)
