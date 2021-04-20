@@ -1,9 +1,9 @@
 import numpy as np
 from tqdm import tqdm
 
-from .pruning import PrunedKetSpace
-from .tensor import QTensor
-from .utils import structured_iter, structured_map
+from ..pruning import PrunedKetSpace
+from ..tensor import QTensor
+from ..utils import structured_iter, structured_map
 
 
 # evolve functions
