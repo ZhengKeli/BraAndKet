@@ -2,9 +2,9 @@ from typing import TypeVar
 
 import numpy as np
 
-from .tensor import QTensor
-from .evolve import lindblad_evolve, schrodinger_evolve
-from .pruning import PrunedKetSpace
+from ..evolve import lindblad_evolve, schrodinger_evolve
+from ..pruning import PrunedKetSpace
+from ..tensor import QTensor
 
 
 class QModel:
