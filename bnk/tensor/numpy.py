@@ -62,7 +62,7 @@ class NumpyQTensor(QTensor):
         psi = self
 
         if normalize:
-            psi /= float(psi.ct @ psi)
+            psi /= np.sqrt(float(psi.ct @ psi))
 
         return psi
 
