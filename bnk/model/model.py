@@ -31,7 +31,7 @@ class QModel:
                 *args, **kwargs)
 
 
-class ReducedQModel(QModel):
+class PrunedQModel(QModel):
     AnyQModel = TypeVar('AnyQModel', bound=QModel)
 
     def __init__(self, org_model: AnyQModel, initial):

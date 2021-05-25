@@ -1,1 +1,1 @@
-from .model import QModel, ReducedQModel
+from .model import QModel, PrunedQModel
