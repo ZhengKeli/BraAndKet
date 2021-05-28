@@ -1,5 +1,5 @@
 import abc
-from typing import Tuple, Iterable
+from typing import Tuple, Iterable, Set, Union
 
 import numpy as np
 
@@ -12,45 +12,237 @@ class QTensor(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def spaces(self) -> Tuple[Space]:
-        pass
+    def spaces(self) -> Set[Space]:
+        """ the spaces/dimensions of this tensor
 
-    @property
-    def shape(self):
-        return tuple(space.n for space in self.spaces)
+        QTensor use spaces as their dimensions.
+        The spaces are not required to be ordered,
+        but they are not allowed to be duplicated.
 
-    @property
-    @abc.abstractmethod
-    def values(self):
-        """ multi-dimensional values
-        :return: multi-dimensional values
+        :return: a set of Spaces.
         """
-        pass
+
+    @abc.abstractmethod
+    def __formal_getitem__(self, *items: Tuple[Space, Union[int, slice]]):
+        """ get specific values from this tensor
+
+        :param spaces: a dict with spaces as keys and indices (or slices) as value.
+        The dict can be represented as an iterable of tuples (to tell the order).
+
+        :return: specified values. The type is recommended to be numpy.ndarray or any compatible data types.
+        """
+
+    def __getitem__(self, items):
+        if isinstance(items, dict):
+            items = items.items()
+
+        if isinstance(items, Space):
+            formal_items = ((items, slice(None)),)
+            return self.__formal_getitem__(*formal_items)
+
+        items = tuple(items)
+
+        if len(items) == 0:
+            return self.__formal_getitem__()
+
+        formal_items = []
+        for item in items:
+            if isinstance(item, Space):
+                item = (item, slice(None))
+            else:
+                item = tuple(item)
+                if len(item) != 2:
+                    formal_items = None
+                    break
+                spa, sli = item
+                if not isinstance(spa, Space):
+                    formal_items = None
+                    break
+            formal_items.append(item)
+
+        if formal_items is None:
+            item = items
+            if len(item) != 2:
+                raise ValueError("Unsupported argument for getting item: " + str(item))
+            spa, sli = item
+            if not isinstance(spa, Space):
+                raise ValueError("Unsupported argument for getting item: " + str(item))
+            formal_items = (item,)
+
+        return self.__formal_getitem__(*formal_items)
+
+    def __iter__(self):
+        """ iteration is NOT allowed """
+        raise TypeError("QTensor is not allowed to be iterated.")
 
     def __eq__(self, other):
         if self is other:
             return True
-        if other == 0:
-            return len(self.spaces) == 0 and self.values == 0
+        if self.is_scalar:
+            return self.scalar() == other
         if not isinstance(other, QTensor):
             return False
 
-        broadcast_self = self.broadcast(other.spaces)
-        broadcast_other = other.broadcast(self.spaces)
-        broadcast_other = broadcast_other.transposed(broadcast_self.spaces)
-        return np.all(broadcast_self.values == broadcast_other.values)
+        union_spaces = tuple(self.spaces.union(other.spaces))
+        self_broadcast = self.broadcast(union_spaces)
+        other_broadcast = other.broadcast(union_spaces)
+
+        self_values = np.asarray(self_broadcast[union_spaces])
+        other_values = np.asarray(other_broadcast[union_spaces])
+        return np.all(self_values == other_values)
+
+    @abc.abstractmethod
+    def __copy__(self):
+        pass
+
+    def copy(self):
+        return self.__copy__()
+
+    def __repr__(self):
+        spaces = tuple(self.spaces)
+        values = self[spaces]
+        return f"{self.__class__.__name__}(spaces={repr(spaces)}, values={repr(values)})"
+
+    # scalar operations
+
+    @property
+    def is_scalar(self):
+        return len(self.spaces) == 0
+
+    def scalar(self):
+        """ get a scalar value from zero-dimension tensor """
+        if not self.is_scalar:
+            raise ValueError(f"This QTensor is not a scalar. It has {len(self.spaces)} spaces.")
+        return self[tuple()]
+
+    def __float__(self):
+        return float(self.scalar())
+
+    # linear operations
+
+    def __pos__(self):
+        return self
+
+    def __neg__(self):
+        return (-1) * self
+
+    @abc.abstractmethod
+    def __add__(self, other):
+        """
+        :rtype: QTensor
+        """
+        pass
+
+    def __radd__(self, other):
+        """
+        :param other: a scalar
+        :rtype: QTensor
+        """
+        return self + other
+
+    def __sub__(self, other):
+        """
+        :rtype: QTensor
+        """
+        return self + (-other)
+
+    def __rsub__(self, other):
+        """
+        :param other: a scalar
+        :rtype: QTensor
+        """
+        return -self + other
+
+    @abc.abstractmethod
+    def __mul__(self, other):
+        """
+        :param other: a scalar or zero-dimensional QTensor
+        :rtype: QTensor
+        """
+        pass
+
+    def __rmul__(self, other):
+        """
+        :param other: a scalar
+        :rtype: QTensor
+        """
+        return self * other
+
+    def __truediv__(self, other):
+        """
+        :param other: a scalar or zero-dimensional QTensor
+        :rtype: QTensor
+        """
+        return self * (1.0 / other)
+
+    def __rtruediv__(self, other):
+        if self.is_scalar:
+            return other / self.scalar()
+        raise TypeError("Can not divide an QTensor (except a zero-dimensional one)")
+
+    # tensor operations
+
+    @property
+    @abc.abstractmethod
+    def ct(self):
+        """ conjugate transpose
+
+        :rtype: QTensor
+        """
+        pass
+
+    @abc.abstractmethod
+    def trace(self, *spaces: KetSpace):
+        """ trace by spaces
+
+        :rtype: QTensor
+        """
+        pass
+
+    @abc.abstractmethod
+    def __matmul__(self, other):
+        """ tensor product
+
+        Normal multiplication is performed when other is a scalar.
+
+        :param other: a QTensor or scalar
+        :rtype: QTensor
+        """
+        pass
+
+    def __rmatmul__(self, other):
+        """
+
+        :param other: a scalar
+        :return: normal product
+        """
+        return other * self
 
     # space operations
 
-    @abc.abstractmethod
-    def transposed(self, new_spaces: Iterable[Space]):
-        pass
-
-    @abc.abstractmethod
     def broadcast(self, broadcast_spaces: Iterable[Space]):
-        pass
+        broadcast_num_spaces = []
+        broadcast_identity = 1
 
-    # flatten & wrap
+        broadcast_spaces = set(broadcast_spaces)
+        while broadcast_spaces:
+            broadcast_space = broadcast_spaces.pop()
+
+            if broadcast_space in self.spaces:
+                continue
+
+            if isinstance(broadcast_space, NumSpace):
+                broadcast_num_spaces.append(broadcast_space)
+                continue
+
+            if isinstance(broadcast_space, HSpace):
+                if broadcast_space.ct not in broadcast_spaces:
+                    raise TypeError(f"Can not broadcast unpaired space {broadcast_space}.")
+                broadcast_spaces.remove(broadcast_space.ct)
+                broadcast_identity @= broadcast_space.ket.identity()
+                continue
+
+            raise TypeError(f"Unsupported custom type {type(broadcast_space)}!")
 
     def flatten(self):
         num_spaces = []
@@ -79,27 +271,15 @@ class QTensor(abc.ABC):
             flattened_spaces = num_spaces, ket_spaces, bra_spaces
             flattened_shape = [flattened_num_space, flattened_ket_space, flattened_bra_space]
 
-        transposed = self.transposed([*num_spaces, *ket_spaces, *bra_spaces])
-        flattened_values = np.reshape(transposed.values, flattened_shape)
+        flattened_values = self[*num_spaces, *ket_spaces, *bra_spaces]
+        flattened_values = np.reshape(flattened_values, flattened_shape)
 
         return flattened_spaces, flattened_values
 
     @staticmethod
-    def wrap(flattened_values, flattened_spaces, spaces=None, copy=True):
+    def inflate(flattened_values, flattened_spaces, *, copy=True):
         from .numpy import NumpyQTensor
-
-        wrapped_spaces = [space for group in flattened_spaces for space in group]
-        wrapped_shape = [space.n for space in wrapped_spaces]
-        wrapped_values = np.reshape(flattened_values, wrapped_shape)
-
-        if copy:
-            wrapped_values = np.copy(wrapped_values)
-
-        tensor = NumpyQTensor(wrapped_spaces, wrapped_values)
-        if spaces:
-            tensor = tensor.transposed(spaces)
-
-        return tensor
+        return NumpyQTensor.inflate(flattened_values, flattened_spaces)
 
     @property
     def flattened_values(self):
@@ -125,7 +305,7 @@ class QTensor(abc.ABC):
         psi = self
 
         if normalize:
-            psi /= float(psi.ct @ psi)
+            psi /= (psi.ct @ psi)
 
         return psi
 
@@ -148,69 +328,6 @@ class QTensor(abc.ABC):
         rho = self
 
         if normalize:
-            rho /= float(rho.trace())
+            rho /= rho.trace()
 
         return rho
-
-    # tensor operations
-
-    @property
-    @abc.abstractmethod
-    def ct(self):
-        pass
-
-    @abc.abstractmethod
-    def trace(self, *spaces: HSpace):
-        pass
-
-    @abc.abstractmethod
-    def __matmul__(self, other):
-        pass
-
-    def __rmatmul__(self, other):
-        return other * self
-
-    # linear operations
-
-    def __neg__(self):
-        return (-1) * self
-
-    def __pos__(self):
-        return self
-
-    @abc.abstractmethod
-    def __add__(self, other):
-        pass
-
-    def __radd__(self, other):
-        if other == 0:
-            return self
-        raise TypeError("QTensor can perform + and - only with matching QTensors or 0.")
-
-    def __sub__(self, other):
-        return self + (-other)
-
-    def __rsub__(self, other):
-        if other == 0:
-            return -self
-        raise TypeError("QTensor can perform + and - only with matching QTensors or 0.")
-
-    @abc.abstractmethod
-    def __mul__(self, other):
-        pass
-
-    def __rmul__(self, other):
-        return self * other
-
-    def __truediv__(self, other):
-        return self * (1.0 / other)
-
-    # single item operations
-
-    def item(self):
-        if len(self.shape) > 0:
-            raise ValueError("Can not convert Tensor with rank>0 to float!")
-        return self.values
-
-    def __float__(self):
-        return float(self.item())

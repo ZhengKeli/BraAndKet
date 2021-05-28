@@ -28,7 +28,10 @@ class Space(abc.ABC):
         return isinstance(self, NumSpace)
 
 
+@DeprecationWarning
 class NumSpace(Space):
+    """ NOT supported yet """
+
     def __init__(self, n, name=None):
         super().__init__()
         self._n = n
