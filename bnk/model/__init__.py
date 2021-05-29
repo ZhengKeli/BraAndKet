@@ -1,1 +1,1 @@
-from .model import QModel, PrunedQModel
+from .model import QModel

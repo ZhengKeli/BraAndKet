@@ -2,9 +2,9 @@ from typing import Iterable
 
 import numpy as np
 
-from .space import KetSpace
-from .tensor import QTensor, zero, one, NumpyQTensor
-from .utils import structured_iter, structured_map
+from ..space import KetSpace
+from ..tensor import QTensor, zero, one, NumpyQTensor
+from ..utils import structured_iter, structured_map
 
 
 class PrunedKetSpace(KetSpace):
