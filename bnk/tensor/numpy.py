@@ -1,21 +1,18 @@
-from typing import Iterable, Tuple, Union, Set
+from typing import Iterable, Tuple, Union
 
 import numpy as np
 
-from .abstract import QTensor
+from .formal import FormalQTensor
 from ..space import Space, HSpace, NumSpace, BraSpace, KetSpace
 
 
-class NumpyQTensor(QTensor):
+class NumpyQTensor(FormalQTensor):
 
     # basic
 
     def __init__(self, spaces: Iterable[Space], values):
         spaces = tuple(spaces)
         values = np.asarray(values)
-
-        if len(set(spaces)) != len(spaces):
-            raise ValueError("There are duplicated spaces!")
 
         for space, shape_n in zip(spaces, np.shape(values)):
             if shape_n == space.n:
@@ -24,14 +21,11 @@ class NumpyQTensor(QTensor):
                 continue
             raise ValueError(f"The spaces do not match the shape!")
 
+        super().__init__(spaces)
         self._spaces = spaces
         self._values = values
 
-    @property
-    def spaces(self) -> Set[Space]:
-        return set(self._spaces)
-
-    def __formal_getitem__(self, *items: Tuple[Space, Union[int, slice]]):
+    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice]]):
         axis_list = []
         slice_list = []
         for spa, sli in items:
@@ -62,34 +56,11 @@ class NumpyQTensor(QTensor):
 
     # linear operations
 
-    def __add__(self, other):
-        if other == 0:
-            return self
-        if self.is_scalar:
-            return NumpyQTensor.from_scalar(self.scalar() + other)
-        if not isinstance(other, QTensor):
-            raise TypeError(f"Can not perform + operation with {other}: this QTensor is not zero-dimensional.")
-
-        new_spaces = tuple(self.spaces.union(other.spaces))
-        self_broadcast = self.broadcast(new_spaces)
-        other_broadcast = other.broadcast(new_spaces)
-
-        new_spaces = self_broadcast.spaces
-        new_values = self_broadcast[new_spaces] + other_broadcast[new_spaces]
+    def _formal_add(self, other, new_spaces):
+        new_values = self[new_spaces] + other[new_spaces]
         return NumpyQTensor(new_spaces, new_values)
 
-    def __mul__(self, other):
-        if other == 1:
-            return self
-        if self.is_scalar:
-            return NumpyQTensor.from_scalar(self.scalar() * other)
-        if isinstance(other, QTensor):
-            if not other.is_scalar:
-                raise TypeError("Please use matmul operator \"@\" for tensor product.")
-            other = other.scalar()
-        else:
-            other = np.asarray(other).item()
-
+    def _formal_mul(self, other):
         new_spaces = self._spaces
         new_values = self._values * other
         return NumpyQTensor(new_spaces, new_values)
@@ -102,10 +73,7 @@ class NumpyQTensor(QTensor):
         new_values = np.conjugate(self._values)
         return NumpyQTensor(new_spaces, new_values)
 
-    def trace(self, *spaces: KetSpace):
-        if len(spaces) == 0:
-            spaces = self._spaces
-
+    def _formal_trace(self, *spaces: KetSpace):
         traced = self
         for ket_space in spaces:
             ket_axis = traced._spaces.index(ket_space)
@@ -113,13 +81,9 @@ class NumpyQTensor(QTensor):
             new_space = tuple(space for axis, space in enumerate(traced.spaces) if axis not in (ket_axis, bra_axis))
             new_values = np.trace(traced._values, axis1=ket_axis, axis2=bra_axis)
             traced = NumpyQTensor(new_space, new_values)
-
         return traced
 
-    def __matmul__(self, other):
-        if not isinstance(other, QTensor):
-            return self * other
-
+    def _formal_matmul(self, other):
         self_spaces = self._spaces
         self_values = self._values
 

@@ -23,53 +23,8 @@ class QTensor(abc.ABC):
         """
 
     @abc.abstractmethod
-    def __formal_getitem__(self, *items: Tuple[Space, Union[int, slice]]):
-        """ get specific values from this tensor
-
-        :param spaces: a dict with spaces as keys and indices (or slices) as value.
-        The dict can be represented as an iterable of tuples (to tell the order).
-
-        :return: specified values. The type is recommended to be numpy.ndarray or any compatible data types.
-        """
-
     def __getitem__(self, items):
-        if isinstance(items, dict):
-            items = items.items()
-
-        if isinstance(items, Space):
-            formal_items = ((items, slice(None)),)
-            return self.__formal_getitem__(*formal_items)
-
-        items = tuple(items)
-
-        if len(items) == 0:
-            return self.__formal_getitem__()
-
-        formal_items = []
-        for item in items:
-            if isinstance(item, Space):
-                item = (item, slice(None))
-            else:
-                item = tuple(item)
-                if len(item) != 2:
-                    formal_items = None
-                    break
-                spa, sli = item
-                if not isinstance(spa, Space):
-                    formal_items = None
-                    break
-            formal_items.append(item)
-
-        if formal_items is None:
-            item = items
-            if len(item) != 2:
-                raise ValueError("Unsupported argument for getting item: " + str(item))
-            spa, sli = item
-            if not isinstance(spa, Space):
-                raise ValueError("Unsupported argument for getting item: " + str(item))
-            formal_items = (item,)
-
-        return self.__formal_getitem__(*formal_items)
+        """ get specific values from this tensor """
 
     def __iter__(self):
         """ iteration is NOT allowed """
@@ -271,7 +226,7 @@ class QTensor(abc.ABC):
             flattened_spaces = num_spaces, ket_spaces, bra_spaces
             flattened_shape = [flattened_num_space, flattened_ket_space, flattened_bra_space]
 
-        flattened_values = self[*num_spaces, *ket_spaces, *bra_spaces]
+        flattened_values = self[(*num_spaces, *ket_spaces, *bra_spaces)]
         flattened_values = np.reshape(flattened_values, flattened_shape)
 
         return flattened_spaces, flattened_values
