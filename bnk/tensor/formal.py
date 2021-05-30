@@ -25,7 +25,7 @@ class FormalQTensor(QTensor, abc.ABC):
         return self._formal_spaces
 
     @abc.abstractmethod
-    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice]]):
+    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):
         """
 
         :param items: tuples of space and corresponding slice
@@ -58,6 +58,15 @@ class FormalQTensor(QTensor, abc.ABC):
                 if not isinstance(spa, Space):
                     formal_items = None
                     break
+                if not isinstance(sli, (int, slice, tuple)):
+                    try:
+                        sli = int(sli)
+                    except TypeError:
+                        try:
+                            sli = tuple(int(i) for i in sli)
+                        except TypeError:
+                            raise TypeError(f"Not supported indexing with {sli}")
+                item = spa, sli
             formal_items.append(item)
 
         if formal_items is None:

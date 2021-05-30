@@ -25,7 +25,7 @@ class NumpyQTensor(FormalQTensor):
         self._spaces = spaces
         self._values = values
 
-    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice]]):
+    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):
         axis_list = []
         slice_list = []
         for spa, sli in items:
@@ -36,10 +36,15 @@ class NumpyQTensor(FormalQTensor):
         for axis in np.arange(len(self._spaces)):
             if axis not in axis_list:
                 axis_list.append(axis)
-                slice_list.append(slice(None))
 
         values = np.transpose(self._values, axis_list)
-        values = values[tuple(slice_list)]
+
+        skip_slices = []
+        for sli in slice_list:
+            values = values[(*skip_slices, sli)]
+            if not isinstance(sli, int):
+                skip_slices.append(slice(None))
+
         return values
 
     def __copy__(self):
