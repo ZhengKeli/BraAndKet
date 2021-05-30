@@ -157,4 +157,12 @@ class FormalQTensor(QTensor, abc.ABC):
         """
 
     def __matmul__(self, other):
+        if not isinstance(other, QTensor):
+            return self * other
+        return self._formal_matmul(other)
+
+    # space operations
+
+    @abc.abstractmethod
+    def _formal_broadcast(self, ket_spaces: Iterable[KetSpace], num_spaces: Iterable[NumSpace]):
         pass

@@ -115,7 +115,7 @@ class NumpyQTensor(FormalQTensor):
                     pass
 
         new_self_spaces = [space for axis, space in enumerate(self_spaces) if axis not in self_dot_axes]
-        new_other_spaces = [space for axis, space in enumerate(self_values) if axis not in other_dot_axes]
+        new_other_spaces = [space for axis, space in enumerate(other_spaces) if axis not in other_dot_axes]
 
         new_spaces = [*new_self_spaces, *new_other_spaces]
         new_values = np.tensordot(self_values, other_values, (self_dot_axes, other_dot_axes))
