@@ -61,8 +61,9 @@ class NumpyQTensor(FormalQTensor):
 
     # linear operations
 
-    def _formal_add(self, other, new_spaces):
-        new_values = self[new_spaces] + other[new_spaces]
+    def _formal_add(self, other):
+        new_spaces = self._spaces
+        new_values = self._values + other[new_spaces]
         return NumpyQTensor(new_spaces, new_values)
 
     def _formal_mul(self, other):

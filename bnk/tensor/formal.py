@@ -83,10 +83,9 @@ class FormalQTensor(QTensor, abc.ABC):
     # linear operations
 
     @abc.abstractmethod
-    def _formal_add(self, other, new_spaces: Tuple[Space, ...]):
+    def _formal_add(self, other):
         """
 
-        :param new_spaces: spaces after broadcast
         :param other: other tensor after broadcast
         :return: result of adding
         """
@@ -101,10 +100,13 @@ class FormalQTensor(QTensor, abc.ABC):
         if not isinstance(other, QTensor):
             raise TypeError(f"Can not perform + operation with {other}: this QTensor is not zero-dimensional.")
 
-        spaces_broadcast = tuple(self.spaces.union(other.spaces))
+        if self.spaces == other.spaces:
+            return self._formal_add(other)
+
+        spaces_broadcast = self.spaces.union(other.spaces)
         self_broadcast = self.broadcast(spaces_broadcast)
         other_broadcast = other.broadcast(spaces_broadcast)
-        return self_broadcast._formal_add(other_broadcast, spaces_broadcast)
+        return self_broadcast + other_broadcast
 
     @abc.abstractmethod
     def _formal_mul(self, other):
