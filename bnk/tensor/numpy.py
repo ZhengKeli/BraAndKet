@@ -151,8 +151,3 @@ class NumpyQTensor(FormalQTensor):
         tensor = NumpyQTensor(wrapped_spaces, wrapped_values)
 
         return tensor
-
-
-zero = NumpyQTensor.from_scalar(0.0)
-
-one = NumpyQTensor.from_scalar(1.0)
