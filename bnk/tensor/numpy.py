@@ -124,6 +124,21 @@ class NumpyQTensor(FormalQTensor):
 
     # space operations
 
+    def _formal_broadcast(self, ket_spaces: Iterable[KetSpace], num_spaces: Iterable[NumSpace]):
+        from ..math import prod
+        broadcast_identity = prod(ket_space.identity() for ket_space in ket_spaces)
+        new_tensor = self @ broadcast_identity
+
+        num_spaces = tuple(num_spaces)
+        if len(num_spaces) > 0:
+            num_shape = [1] * len(num_spaces)
+            new_shape = (*num_shape, *np.shape(new_tensor.values))
+            new_values = np.reshape(new_tensor.values, new_shape)
+            spaces = (*num_spaces, *new_tensor.spaces)
+            new_tensor = NumpyQTensor(spaces, new_values)
+
+        return new_tensor
+
     @staticmethod
     def inflate(flattened_values, flattened_spaces, *, copy=True):
         wrapped_spaces = [space for group in flattened_spaces for space in group]

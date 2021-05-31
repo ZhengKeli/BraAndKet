@@ -4,7 +4,7 @@ from typing import Tuple, Union, Iterable, Set
 import numpy as np
 
 from .abstract import QTensor
-from ..space import KetSpace
+from ..space import KetSpace, NumSpace, HSpace
 from ..space import Space
 
 
@@ -177,3 +177,29 @@ class FormalQTensor(QTensor, abc.ABC):
     @abc.abstractmethod
     def _formal_broadcast(self, ket_spaces: Iterable[KetSpace], num_spaces: Iterable[NumSpace]):
         pass
+
+    def broadcast(self, spaces: Iterable[Space]):
+        ket_spaces = []
+        num_spaces = []
+
+        spaces = set(spaces)
+        while spaces:
+            space = spaces.pop()
+
+            if space in self.spaces:
+                continue
+
+            if isinstance(space, NumSpace):
+                num_spaces.append(space)
+                continue
+
+            if isinstance(space, HSpace):
+                if space.ct not in spaces:
+                    raise TypeError(f"Can not broadcast unpaired space {space}.")
+                spaces.remove(space.ct)
+                ket_spaces.append(space.ket)
+                continue
+
+            raise TypeError(f"Unsupported custom type {type(space)}!")
+
+        return self._formal_broadcast(ket_spaces, num_spaces)

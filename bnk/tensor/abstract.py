@@ -175,29 +175,9 @@ class QTensor(abc.ABC):
 
     # space operations
 
+    @abc.abstractmethod
     def broadcast(self, broadcast_spaces: Iterable[Space]):
-        broadcast_num_spaces = []
-        broadcast_identity = 1
-
-        broadcast_spaces = set(broadcast_spaces)
-        while broadcast_spaces:
-            broadcast_space = broadcast_spaces.pop()
-
-            if broadcast_space in self.spaces:
-                continue
-
-            if isinstance(broadcast_space, NumSpace):
-                broadcast_num_spaces.append(broadcast_space)
-                continue
-
-            if isinstance(broadcast_space, HSpace):
-                if broadcast_space.ct not in broadcast_spaces:
-                    raise TypeError(f"Can not broadcast unpaired space {broadcast_space}.")
-                broadcast_spaces.remove(broadcast_space.ct)
-                broadcast_identity @= broadcast_space.ket.identity()
-                continue
-
-            raise TypeError(f"Unsupported custom type {type(broadcast_space)}!")
+        pass
 
     def flatten(self):
         num_spaces = []
