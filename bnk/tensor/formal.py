@@ -80,6 +80,13 @@ class FormalQTensor(QTensor, abc.ABC):
 
         return self._formal_getitem(*formal_items)
 
+    # scalar operations
+
+    @staticmethod
+    @abc.abstractmethod
+    def from_scalar(scalar):
+        pass
+
     # linear operations
 
     @abc.abstractmethod
@@ -95,8 +102,10 @@ class FormalQTensor(QTensor, abc.ABC):
         if other == 0:
             return self
         if self.is_scalar:
-            from .numpy import NumpyQTensor
-            return NumpyQTensor.from_scalar(self.scalar() + other)
+            scalar = self.scalar()
+            if scalar == 0:
+                return other
+            return scalar + other
         if not isinstance(other, QTensor):
             raise TypeError(f"Can not perform + operation with {other}: this QTensor is not zero-dimensional.")
 
@@ -122,8 +131,10 @@ class FormalQTensor(QTensor, abc.ABC):
         if other == 1:
             return self
         if self.is_scalar:
-            from .numpy import NumpyQTensor
-            return NumpyQTensor.from_scalar(self.scalar() * other)
+            scalar = self.scalar()
+            if scalar == 1:
+                return other
+            return scalar * other
         if isinstance(other, QTensor):
             if not other.is_scalar:
                 raise TypeError("Please use matmul operator \"@\" for tensor product.")
