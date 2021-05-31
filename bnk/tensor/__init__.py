@@ -1,5 +1,6 @@
 from .abstract import QTensor
 from .numpy import NumpyQTensor
+from .sparse import SparseQTensor
 
-zero = NumpyQTensor.from_scalar(0.0)
-one = NumpyQTensor.from_scalar(1.0)
+zero = SparseQTensor.from_scalar(0)
+one = SparseQTensor.from_scalar(1)

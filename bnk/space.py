@@ -28,7 +28,6 @@ class Space(abc.ABC):
         return isinstance(self, NumSpace)
 
 
-@DeprecationWarning
 class NumSpace(Space):
     """ NOT supported yet """
 
@@ -84,7 +83,6 @@ class KetSpace(HSpace):
         self._n = n
         self._name = name
 
-        self._eigenstates = np.eye(self.n, dtype=np.bool)
         self._bra = BraSpace(self)
 
     @property
@@ -113,23 +111,35 @@ class KetSpace(HSpace):
     def bra(self):
         return self._bra
 
-    def eigenstate(self, index, dtype=np.float32):
-        from .tensor import NumpyQTensor
-        values = self._eigenstates[index]
-        values = np.asarray(values, dtype=dtype)
-        return NumpyQTensor([self], values)
+    def eigenstate(self, index, *, sparse=True, dtype=np.float32):
+        if sparse:
+            from .tensor import SparseQTensor
+            coordinate = (index,)
+            value = np.asarray(True, dtype=dtype)
+            return SparseQTensor([self], [(coordinate, value)])
+        else:
+            from .tensor import NumpyQTensor
+            values = np.zeros([self.n], dtype=dtype)
+            values[index] = 1
+            return NumpyQTensor([self], values)
 
-    def identity(self, dtype=np.float32):
-        from .tensor import NumpyQTensor
-        values = self._eigenstates
-        values = np.asarray(values, dtype=dtype)
-        return NumpyQTensor([self, self.ct], values)
+    def identity(self, *, sparse=True, dtype=np.float32):
+        if sparse:
+            from .tensor import SparseQTensor
+            value = np.asarray(True, dtype=dtype)
+            values = (((i, i), value) for i in range(self.n))
+            return SparseQTensor([self, self.ct], values)
+        else:
+            from .tensor import NumpyQTensor
+            values = np.eye(self.n, dtype=dtype)
+            return NumpyQTensor([self, self.ct], values)
 
-    def operator(self, ket_index, bra_index, dtype=np.float32):
-        return self.eigenstate(ket_index, dtype) @ self.eigenstate(bra_index, dtype).ct
+    def operator(self, ket_index, bra_index, *, sparse=True, dtype=np.float32):
+        return self.eigenstate(ket_index, sparse=sparse, dtype=dtype) @ \
+               self.eigenstate(bra_index, sparse=sparse, dtype=dtype).ct
 
-    def projector(self, index, dtype=np.float32):
-        return self.operator(index, index, dtype)
+    def projector(self, index, *, sparse=True, dtype=np.float32):
+        return self.operator(index, index, sparse=sparse, dtype=dtype)
 
 
 class BraSpace(HSpace):
