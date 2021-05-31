@@ -1,6 +1,6 @@
-from .evolve import *
 from .math import sum, prod, sum_ct
-from .model import *
-from .pruning import *
-from .space import NumSpace, KetSpace, BraSpace
+from .space import HSpace, KetSpace, BraSpace
 from .tensor import *
+from .pruning import *
+from .evolve import *
+from .model import *

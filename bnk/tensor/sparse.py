@@ -3,7 +3,7 @@ from typing import Tuple, Union, Iterable, Any
 import numpy as np
 
 from .formal import FormalQTensor
-from ..space import Space, KetSpace, HSpace, BraSpace, NumSpace
+from ..space import Space, NumSpace, HSpace, BraSpace, KetSpace
 
 
 class SparseQTensor(FormalQTensor):

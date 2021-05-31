@@ -113,24 +113,24 @@ class KetSpace(HSpace):
 
     def eigenstate(self, index, *, sparse=True, dtype=np.float32):
         if sparse:
-            from .tensor import SparseQTensor
+            from ..tensor import SparseQTensor
             coordinate = (index,)
             value = np.asarray(True, dtype=dtype)
             return SparseQTensor([self], [(coordinate, value)])
         else:
-            from .tensor import NumpyQTensor
+            from ..tensor import NumpyQTensor
             values = np.zeros([self.n], dtype=dtype)
             values[index] = 1
             return NumpyQTensor([self], values)
 
     def identity(self, *, sparse=True, dtype=np.float32):
         if sparse:
-            from .tensor import SparseQTensor
+            from ..tensor import SparseQTensor
             value = np.asarray(True, dtype=dtype)
             values = (((i, i), value) for i in range(self.n))
             return SparseQTensor([self, self.ct], values)
         else:
-            from .tensor import NumpyQTensor
+            from ..tensor import NumpyQTensor
             values = np.eye(self.n, dtype=dtype)
             return NumpyQTensor([self, self.ct], values)
 

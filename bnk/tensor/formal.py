@@ -4,8 +4,7 @@ from typing import Tuple, Union, Iterable, Set
 import numpy as np
 
 from .abstract import QTensor
-from ..space import KetSpace, NumSpace, HSpace
-from ..space import Space
+from ..space import Space, NumSpace, HSpace, KetSpace
 
 
 class FormalQTensor(QTensor, abc.ABC):

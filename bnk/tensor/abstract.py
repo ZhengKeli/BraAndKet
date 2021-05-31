@@ -1,9 +1,9 @@
 import abc
-from typing import Tuple, Iterable, Set, Union
+from typing import Iterable, Set
 
 import numpy as np
 
-from ..space import Space, HSpace, NumSpace, BraSpace, KetSpace
+from ..space import Space, NumSpace, HSpace, BraSpace, KetSpace
 
 
 class QTensor(abc.ABC):
