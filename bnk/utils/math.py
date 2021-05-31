@@ -1,4 +1,4 @@
-from .tensor import QTensor, one, zero
+from ..tensor import QTensor, one, zero
 from .utils import structured_iter
 
 
