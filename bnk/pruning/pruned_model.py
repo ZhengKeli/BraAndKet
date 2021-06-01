@@ -2,7 +2,7 @@ from typing import TypeVar
 
 import numpy as np
 
-from .space import PrunedKetSpace
+from .pruned_space import PrunedKetSpace
 from ..model import QModel
 
 
