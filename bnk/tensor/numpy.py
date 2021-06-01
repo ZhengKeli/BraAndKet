@@ -11,7 +11,7 @@ class NumpyQTensor(FormalQTensor):
     # basic
 
     def __init__(self, spaces: Iterable[Space], values):
-        spaces = tuple(spaces)
+        super().__init__(spaces)
         values = np.asarray(values)
 
         for space, shape_n in zip(spaces, np.shape(values)):
@@ -21,23 +21,25 @@ class NumpyQTensor(FormalQTensor):
                 continue
             raise ValueError(f"The spaces do not match the shape!")
 
-        super().__init__(spaces)
-        self._spaces = spaces
         self._values = values
+
+    @property
+    def values(self):
+        return self._values
 
     def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):
         axis_list = []
         slice_list = []
         for spa, sli in items:
-            axis = self._spaces.index(spa)
+            axis = self.spaces.index(spa)
             axis_list.append(axis)
             slice_list.append(sli)
 
-        for axis in np.arange(len(self._spaces)):
+        for axis in np.arange(len(self.spaces)):
             if axis not in axis_list:
                 axis_list.append(axis)
 
-        values = np.transpose(self._values, axis_list)
+        values = np.transpose(self.values, axis_list)
 
         skip_slices = []
         for sli in slice_list:
@@ -48,10 +50,10 @@ class NumpyQTensor(FormalQTensor):
         return values
 
     def __copy__(self):
-        return NumpyQTensor(self._spaces, self._values.copy())
+        return NumpyQTensor(self.spaces, self.values.copy())
 
     def __repr__(self):
-        return f"NumpyQTensor(spaces={repr(self._spaces)}, values={self._values})"
+        return f"NumpyQTensor(spaces={repr(self.spaces)}, values={self.values})"
 
     # scalar operations
 
@@ -62,36 +64,36 @@ class NumpyQTensor(FormalQTensor):
     # linear operations
 
     def _formal_add(self, other):
-        new_spaces = self._spaces
-        new_values = self._values + other[new_spaces]
+        new_spaces = self.spaces
+        new_values = self.values + other[new_spaces]
         return NumpyQTensor(new_spaces, new_values)
 
     def _formal_mul(self, other):
-        new_spaces = self._spaces
-        new_values = self._values * other
+        new_spaces = self.spaces
+        new_values = self.values * other
         return NumpyQTensor(new_spaces, new_values)
 
     # tensor operations
 
     @property
     def ct(self):
-        new_spaces = tuple(space.ct for space in self._spaces if isinstance(space, HSpace))
-        new_values = np.conjugate(self._values)
+        new_spaces = tuple(space.ct for space in self.spaces if isinstance(space, HSpace))
+        new_values = np.conjugate(self.values)
         return NumpyQTensor(new_spaces, new_values)
 
     def _formal_trace(self, *spaces: KetSpace):
         traced = self
         for ket_space in spaces:
-            ket_axis = traced._spaces.index(ket_space)
-            bra_axis = traced._spaces.index(ket_space.ct)
+            ket_axis = traced.spaces.index(ket_space)
+            bra_axis = traced.spaces.index(ket_space.ct)
             new_space = tuple(space for axis, space in enumerate(traced.spaces) if axis not in (ket_axis, bra_axis))
-            new_values = np.trace(traced._values, axis1=ket_axis, axis2=bra_axis)
+            new_values = np.trace(traced.values, axis1=ket_axis, axis2=bra_axis)
             traced = NumpyQTensor(new_space, new_values)
         return traced
 
     def _formal_matmul(self, other):
-        self_spaces = self._spaces
-        self_values = self._values
+        self_spaces = self.spaces
+        self_values = self.values
 
         other_spaces = tuple(other.spaces)
         other_values = other[other_spaces]

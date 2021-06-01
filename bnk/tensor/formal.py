@@ -12,16 +12,19 @@ class FormalQTensor(QTensor, abc.ABC):
     # basic
 
     def __init__(self, spaces: Iterable[Space]):
+        spaces = tuple(spaces)
+
         spaces_set = set()
         for space in spaces:
             if space in spaces_set:
                 raise ValueError("There are duplicated spaces!")
             spaces_set.add(space)
-        self._formal_spaces = spaces_set
+
+        self._spaces = spaces
 
     @property
-    def spaces(self) -> Set[Space]:
-        return self._formal_spaces
+    def spaces(self) -> Tuple[Space, ...]:
+        return self._spaces
 
     @abc.abstractmethod
     def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):

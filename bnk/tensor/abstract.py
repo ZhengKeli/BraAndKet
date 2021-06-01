@@ -1,5 +1,5 @@
 import abc
-from typing import Iterable, Set
+from typing import Iterable, Set, Tuple
 
 import numpy as np
 
@@ -12,14 +12,14 @@ class QTensor(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def spaces(self) -> Set[Space]:
+    def spaces(self) -> Tuple[Space, ...]:
         """ the spaces/dimensions of this tensor
 
         QTensor use spaces as their dimensions.
         The spaces are not required to be ordered,
         but they are not allowed to be duplicated.
 
-        :return: a set of Spaces.
+        :return: an tuple of Spaces.
         """
 
     @abc.abstractmethod
@@ -38,10 +38,10 @@ class QTensor(abc.ABC):
         if not isinstance(other, QTensor):
             return False
 
-        union_spaces = tuple(self.spaces.union(other.spaces))
-        self_broadcast = self.broadcast(union_spaces)
-        other_broadcast = other.broadcast(union_spaces)
+        self_broadcast = self.broadcast(other.spaces)
+        other_broadcast = other.broadcast(self.spaces)
 
+        union_spaces = self_broadcast.spaces
         self_values = np.asarray(self_broadcast[union_spaces])
         other_values = np.asarray(other_broadcast[union_spaces])
         return np.all(self_values == other_values)

@@ -10,43 +10,42 @@ class SparseQTensor(FormalQTensor):
 
     # basic
 
-    def __init__(self, spaces: Iterable[Space], values: Union[dict, Iterable[Tuple[Tuple[int, ...], Any]]]):
-        spaces = tuple(spaces)
+    def __init__(self, spaces: Iterable[Space], values):
         super().__init__(spaces)
 
-        if isinstance(values, dict):
-            values = values.items()
-
-        values_map = {}
+        _values = {}
         for coordinate, value in values:
             coordinate = tuple(int(i) for i in coordinate)
-            if len(coordinate) != len(spaces):
+            if len(coordinate) != len(self.spaces):
                 raise ValueError("The shape of coordinates does not match the spaces")
             for axis, i in enumerate(coordinate):
-                if not 0 <= i <= spaces[axis].n:
+                if not 0 <= i <= self.spaces[axis].n:
                     raise ValueError("The coordinates is out of bounds!")
 
-            existed = values_map.get(coordinate)
+            existed = _values.get(coordinate)
             if existed is None:
-                values_map[coordinate] = value
+                _values[coordinate] = value
             else:
                 new_value = existed + value
                 if new_value == 0:
-                    del values_map[coordinate]
+                    del _values[coordinate]
                 else:
-                    values_map[coordinate] = new_value
+                    _values[coordinate] = new_value
 
-        self._spaces = spaces
-        self._values = values_map
+        self._values = _values
+
+    @property
+    def values(self):
+        return self._values.items()
 
     def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):
         items = tuple(items)
         spaces = tuple(spa for spa, _ in items)
-        axes = tuple(self._spaces.index(space) for space in spaces)
+        axes = tuple(self.spaces.index(space) for space in spaces)
 
         new_coordinates = []
         new_values = []
-        for coordinate, value in self._values.items():
+        for coordinate, value in self.values:
             coordinate = tuple(coordinate[axis] for axis in axes)
 
             new_coordinate = [[]]
@@ -108,32 +107,27 @@ class SparseQTensor(FormalQTensor):
                 assert False
 
         if len(new_shape) == 0:
-            return new_values[0]
+            return np.sum(new_values)
 
-        new_indices = np.ravel_multi_index(np.transpose(new_coordinates), new_shape)
         new_values = np.asarray(new_values)
+        new_coordinates = tuple(tuple(new_coordinate) for new_coordinate in new_coordinates)
         new_array = np.zeros(new_shape, dtype=new_values.dtype)
-        new_array.put(new_indices, new_values)
+
+        for new_coordinate, new_value in zip(new_coordinates, new_values):
+            new_array[new_coordinate] += new_value
         return new_array
 
     def to_dense(self):
-        spaces = self._spaces
-        shape = tuple(space.n for space in spaces)
-        coordinates, values = zip(*self._values.items())
-        indices = np.ravel_multi_index(np.transpose(np.asarray(coordinates)))
-        values = np.asarray(values)
-        array = np.zeros(shape, dtype=values.dtype)
-        array.put(indices, values)
+        spaces = self.spaces
+        values = self[spaces]
         from .numpy import NumpyQTensor
-        return NumpyQTensor(spaces, array)
+        return NumpyQTensor(spaces, values)
 
     def __copy__(self):
-        spaces = self._spaces
-        values = self._values
-        return SparseQTensor(spaces, values)
+        return SparseQTensor(self.spaces, self.values)
 
     def __repr__(self):
-        spaces = tuple(self.spaces)
+        spaces = self.spaces
         values = self._values
         return f"{self.__class__.__name__}(spaces={repr(spaces)}, values={repr(values)})"
 
@@ -149,13 +143,13 @@ class SparseQTensor(FormalQTensor):
         if not isinstance(other, SparseQTensor):
             return self.to_dense() + other
 
-        new_spaces = self._spaces
-        self_axes = tuple(other._spaces.index(space) for space in new_spaces)
+        new_spaces = self.spaces
+        self_axes = tuple(other.spaces.index(space) for space in new_spaces)
 
         def iter_new_values():
-            for coordinate, value in self._values.items():
+            for coordinate, value in self.values:
                 yield coordinate, value
-            for other_coordinate, other_value in other._values.items():
+            for other_coordinate, other_value in other.values.items():
                 coordinate = tuple(other_coordinate[axis] for axis in self_axes)
                 value = other_value
                 yield coordinate, value
@@ -164,46 +158,45 @@ class SparseQTensor(FormalQTensor):
         return SparseQTensor(new_spaces, new_values)
 
     def _formal_mul(self, other):
-        new_spaces = self._spaces
-        new_values = ((coordinate, value * other) for coordinate, value in self._values.items())
+        new_spaces = self.spaces
+        new_values = ((coordinate, value * other) for coordinate, value in self.values)
         return SparseQTensor(new_spaces, new_values)
 
     # tensor operations
 
     @property
     def ct(self):
-        new_spaces = tuple(space.ct for space in self._spaces if isinstance(space, HSpace))
-        new_values = ((coordinate, np.conjugate(value)) for coordinate, value in self._values.items())
+        new_spaces = tuple(space.ct for space in self.spaces if isinstance(space, HSpace))
+        new_values = ((coordinate, np.conjugate(value)) for coordinate, value in self.values)
         return SparseQTensor(new_spaces, new_values)
 
     def _formal_trace(self, *spaces: KetSpace):
-        axes_ket = tuple(self._spaces.index(space) for space in spaces)
-        axes_bra = tuple(self._spaces.index(space.ct) for space in spaces)
-        axes_others = tuple(i for i in range(len(self._spaces)) if i not in axes_ket and i not in axes_bra)
+        axes_ket = tuple(self.spaces.index(space) for space in spaces)
+        axes_bra = tuple(self.spaces.index(space.ct) for space in spaces)
+        axes_others = tuple(i for i in range(len(self.spaces)) if i not in axes_ket and i not in axes_bra)
 
         def iter_new_values():
-            for coordinate, value in self._values.items():
+            for coordinate, value in self.values:
                 if all(coordinate[axis_ket] == coordinate[axis_bra] for axis_ket, axis_bra in zip(axes_ket, axes_bra)):
                     new_coordinate = tuple(coordinate[axis] for axis in axes_others)
                     new_value = value
                     yield new_coordinate, new_value
 
-        new_spaces = tuple(self._spaces[axis] for axis in axes_others)
+        new_spaces = tuple(self.spaces[axis] for axis in axes_others)
         new_values = iter_new_values()
         return SparseQTensor(new_spaces, new_values)
 
     def _formal_matmul(self, other):
-        self_spaces = self._spaces
-
         from bnk import NumpyQTensor
         if not isinstance(other, (NumpyQTensor, SparseQTensor)):
             raise TypeError(f"Unsupported type {type(other)}")
 
-        other_spaces = tuple(other._spaces)
+        self_spaces = tuple(self.spaces)
+        other_spaces = tuple(other.spaces)
 
         self_dot_axes = []
         other_dot_axes = []
-        for self_axis, self_space in enumerate(self._spaces):
+        for self_axis, self_space in enumerate(self_spaces):
             # KetSpace ignored
             if isinstance(self_space, BraSpace):
                 try:
@@ -226,8 +219,8 @@ class SparseQTensor(FormalQTensor):
 
         if isinstance(other, SparseQTensor):
             def iter_new_values():
-                for self_coordinate, self_value in self._values.items():
-                    for other_coordinate, other_value in other._values.items():
+                for self_coordinate, self_value in self.values:
+                    for other_coordinate, other_value in other.values:
                         if all(self_coordinate[axis_bra] == other_coordinate[axis_ket]
                                for axis_bra, axis_ket in zip(self_dot_axes, other_dot_axes)):
                             new_coordinate = tuple(self_coordinate[axis] for axis in new_self_axes) + \
@@ -237,7 +230,7 @@ class SparseQTensor(FormalQTensor):
 
             new_values = iter_new_values()
         elif isinstance(other, NumpyQTensor):
-            other_values = other._values
+            other_values = other.values
 
             def iter_other_values(self_coordinate):
                 other_new_coordinates = np.mgrid[tuple(slice(other_spaces[axis].n) for axis in new_other_axes)]
@@ -249,7 +242,7 @@ class SparseQTensor(FormalQTensor):
                     yield other_coordinate, other_values[tuple(other_coordinate)]
 
             def iter_new_values():
-                for self_coordinate, self_value in self._values.items():
+                for self_coordinate, self_value in self.values:
                     for other_coordinate, other_value in iter_other_values(self_coordinate):
                         new_coordinate = tuple(self_coordinate[axis] for axis in new_self_axes) + \
                                          tuple(other_coordinate[axis] for axis in new_other_axes)
@@ -275,8 +268,8 @@ class SparseQTensor(FormalQTensor):
         return new_tensor
 
     def _formal_flatten(self, ket_spaces, bra_spaces, *, sparse=False):
-        ket_axes = tuple(self._spaces.index(space) for space in ket_spaces)
-        bra_axes = tuple(self._spaces.index(space) for space in bra_spaces)
+        ket_axes = tuple(self.spaces.index(space) for space in ket_spaces)
+        bra_axes = tuple(self.spaces.index(space) for space in bra_spaces)
 
         ket_shape = tuple(space.n for space in ket_spaces)
         bra_shape = tuple(space.n for space in bra_spaces)
@@ -285,11 +278,20 @@ class SparseQTensor(FormalQTensor):
         new_ket_indices = []
         new_bra_indices = []
         new_values = []
-        for coordinate, value in self._values.items():
+        for coordinate, value in self.values:
             ket_coordinate = tuple(coordinate[axis] for axis in ket_axes)
             bra_coordinate = tuple(coordinate[axis] for axis in bra_axes)
-            ket_index = np.ravel_multi_index(ket_coordinate, ket_shape)
-            bra_index = np.ravel_multi_index(bra_coordinate, bra_shape)
+
+            if len(ket_coordinate) > 0:
+                ket_index = np.ravel_multi_index(ket_coordinate, ket_shape)
+            else:
+                ket_index = 0
+
+            if len(bra_coordinate) > 0:
+                bra_index = np.ravel_multi_index(bra_coordinate, bra_shape)
+            else:
+                bra_index = 0
+
             new_ket_indices.append(ket_index)
             new_bra_indices.append(bra_index)
             new_values.append(value)
@@ -299,8 +301,8 @@ class SparseQTensor(FormalQTensor):
             new_matrix = coo_matrix((new_values, (new_ket_indices, new_bra_indices)), new_shape)
             return new_matrix
         else:
-            new_array = np.zeros(new_shape)
-            new_array.put(np.ravel_multi_index((new_ket_indices, new_bra_indices), new_shape), new_values)
+            new_array = self[(*ket_spaces, *bra_spaces)]
+            new_array = np.reshape(new_array, new_shape)
             return new_array
 
     @classmethod
@@ -312,15 +314,28 @@ class SparseQTensor(FormalQTensor):
         try:
             from scipy.sparse import coo_matrix
             flattened = coo_matrix(flattened)
+
+            if len(ket_shape) > 0:
+                ket_coordinates = np.transpose(np.unravel_index(flattened.row, ket_shape))
+            else:
+                ket_coordinates = tuple(tuple()) * len(flattened.row)
+
+            if len(bra_shape) > 0:
+                bra_coordinates = np.transpose(np.unravel_index(flattened.col, bra_shape))
+            else:
+                bra_coordinates = tuple(tuple()) * len(flattened.col)
+
             values = (
-                ((np.unravel_index(row, ket_shape), np.unravel_index(col, bra_shape)), val)
-                for row, col, val in zip(flattened.row, flattened.col, flattened.data)
+                ((*ket_coordinate, *bra_coordinate), value)
+                for ket_coordinate, bra_coordinate, value in zip(ket_coordinates, bra_coordinates, flattened.data)
             )
             return SparseQTensor((*ket_spaces, *bra_spaces), values)
         except ImportError:
             rows, cols = np.nonzero(flattened)
+            ket_coordinates = np.transpose(np.unravel_index(rows, ket_shape))
+            bra_coordinates = np.transpose(np.unravel_index(cols, bra_shape))
             values = (
-                ((np.unravel_index(row, ket_shape), np.unravel_index(col, bra_shape)), flattened[rows, cols])
-                for row, col in zip(rows, cols)
+                ((*ket_coordinate, *bra_coordinate), flattened[row, col])
+                for row, col, ket_coordinate, bra_coordinate in zip(rows, cols, ket_coordinates, bra_coordinates)
             )
             return SparseQTensor((*ket_spaces, *bra_spaces), values)
