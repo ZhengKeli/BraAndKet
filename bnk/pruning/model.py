@@ -34,7 +34,7 @@ class PrunedQModel(QModel):
         return self.space.eigenstate(index, dtype=dtype)
 
     def reduce(self, tensor):
-        return self.space.reduce(tensor)
+        return self.space.prune(tensor)
 
     def inflate(self, tensor):
-        return self.space.inflate(tensor)
+        return self.space.restore(tensor)

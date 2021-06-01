@@ -200,20 +200,35 @@ class FormalQTensor(QTensor, abc.ABC):
     def _formal_flatten(self, ket_spaces, bra_spaces):
         pass
 
-    def flatten(self, ket_spaces=None, bra_spaces=None):
-        if ket_spaces is not None:
+    def flatten(self, ket_spaces=None, bra_spaces=None, *, return_spaces=False):
+        _ket_spaces = [space for space in self.spaces if isinstance(space, KetSpace)]
+        _ket_spaces = tuple(sorted(_ket_spaces, key=lambda sp: (-sp.n, id(sp))))
+
+        _bra_spaces = [space for space in self.spaces if isinstance(space, BraSpace)]
+        _bra_spaces = tuple(sorted(_bra_spaces, key=lambda sp: (-sp.n, id(sp.ket))))
+
+        if ket_spaces is None:
+            ket_spaces = _ket_spaces
+        else:
             ket_spaces = tuple(ket_spaces)
-        else:
-            ket_spaces = [space for space in self.spaces if isinstance(space, KetSpace)]
-            ket_spaces = tuple(sorted(ket_spaces, key=lambda sp: (-sp.n, id(sp))))
+            ket_spaces_set = set(ket_spaces)
+            remained_ket_spaces = (space for space in _ket_spaces if space not in ket_spaces_set)
+            ket_spaces = (*ket_spaces, *remained_ket_spaces)
 
-        if bra_spaces is not None:
+        if bra_spaces is None:
+            bra_spaces = _bra_spaces
+        else:
             bra_spaces = tuple(bra_spaces)
-        else:
-            bra_spaces = [space for space in self.spaces if isinstance(space, BraSpace)]
-            bra_spaces = tuple(sorted(bra_spaces, key=lambda sp: (-sp.n, id(sp.ket))))
+            bra_spaces_set = set(bra_spaces)
+            remained_ket_spaces = (space for space in _ket_spaces if space not in bra_spaces_set)
+            ket_spaces = (*ket_spaces, *remained_ket_spaces)
 
-        return self._formal_flatten(ket_spaces, bra_spaces)
+        flattened = self._formal_flatten(ket_spaces, bra_spaces)
+
+        if return_spaces:
+            return (ket_spaces, bra_spaces), flattened
+        else:
+            return flattened
 
     @classmethod
     @abc.abstractmethod
