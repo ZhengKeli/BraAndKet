@@ -60,6 +60,12 @@ class QTensor(abc.ABC):
 
     # scalar operations
 
+    @classmethod
+    @abc.abstractmethod
+    def from_scalar(cls, scalar):
+        from .sparse import SparseQTensor
+        return SparseQTensor.from_scalar(scalar)
+
     @property
     def is_scalar(self):
         return len(self.spaces) == 0

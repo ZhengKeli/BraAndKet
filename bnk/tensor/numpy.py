@@ -55,8 +55,8 @@ class NumpyQTensor(FormalQTensor):
 
     # scalar operations
 
-    @staticmethod
-    def from_scalar(scalar):
+    @classmethod
+    def from_scalar(cls, scalar):
         return NumpyQTensor([], scalar)
 
     # linear operations

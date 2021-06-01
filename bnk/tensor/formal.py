@@ -79,13 +79,6 @@ class FormalQTensor(QTensor, abc.ABC):
 
         return self._formal_getitem(*formal_items)
 
-    # scalar operations
-
-    @staticmethod
-    @abc.abstractmethod
-    def from_scalar(scalar):
-        pass
-
     # linear operations
 
     @abc.abstractmethod
