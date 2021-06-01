@@ -125,7 +125,7 @@ class NumpyQTensor(FormalQTensor):
     # space operations
 
     def _formal_broadcast(self, ket_spaces: Iterable[KetSpace], num_spaces: Iterable[NumSpace]):
-        from ..math import prod
+        from ..utils import prod
         broadcast_identity = prod(ket_space.identity() for ket_space in ket_spaces)
         new_tensor = self @ broadcast_identity
 
