@@ -1,4 +1,6 @@
 def structured_iter(structure):
+    if structure is None:
+        return
     try:
         structure_iter = iter(structure)
     except TypeError:
@@ -12,6 +14,8 @@ def structured_iter(structure):
 
 
 def structured_map(structure, map_func):
+    if structure is None:
+        return None
     if isinstance(structure, list):
         return [structured_map(item, map_func) for item in structure]
     elif isinstance(structure, tuple):
