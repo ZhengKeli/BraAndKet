@@ -4,7 +4,7 @@ from typing import Tuple, Union, Iterable, Set
 import numpy as np
 
 from .abstract import QTensor
-from ..space import Space, NumSpace, HSpace, KetSpace
+from ..space import Space, NumSpace, HSpace, KetSpace, BraSpace
 
 
 class FormalQTensor(QTensor, abc.ABC):
@@ -195,3 +195,33 @@ class FormalQTensor(QTensor, abc.ABC):
             raise TypeError(f"Unsupported custom type {type(space)}!")
 
         return self._formal_broadcast(ket_spaces, num_spaces)
+
+    @abc.abstractmethod
+    def _formal_flatten(self, ket_spaces, bra_spaces):
+        pass
+
+    def flatten(self, ket_spaces=None, bra_spaces=None):
+        if ket_spaces is not None:
+            ket_spaces = tuple(ket_spaces)
+        else:
+            ket_spaces = [space for space in self.spaces if isinstance(space, KetSpace)]
+            ket_spaces = tuple(sorted(ket_spaces, key=lambda sp: (-sp.n, id(sp))))
+
+        if bra_spaces is not None:
+            bra_spaces = tuple(bra_spaces)
+        else:
+            bra_spaces = [space for space in self.spaces if isinstance(space, BraSpace)]
+            bra_spaces = tuple(sorted(bra_spaces, key=lambda sp: (-sp.n, id(sp.ket))))
+
+        return self._formal_flatten(ket_spaces, bra_spaces)
+
+    @classmethod
+    @abc.abstractmethod
+    def _formal_inflate(cls, flattened, ket_spaces, bra_spaces, *, copy=True):
+        pass
+
+    @classmethod
+    def inflate(cls, flattened, ket_spaces: Iterable[KetSpace], bra_spaces: Iterable[BraSpace], *, copy=True):
+        ket_spaces = tuple(ket_spaces)
+        bra_spaces = tuple(bra_spaces)
+        return cls._formal_inflate(flattened, ket_spaces, bra_spaces, copy=copy)

@@ -139,15 +139,18 @@ class NumpyQTensor(FormalQTensor):
 
         return new_tensor
 
-    @staticmethod
-    def inflate(flattened_values, flattened_spaces, *, copy=True):
-        wrapped_spaces = [space for group in flattened_spaces for space in group]
+    def _formal_flatten(self, ket_spaces, bra_spaces):
+        ket_shape = [space.n for space in ket_spaces]
+        bra_shape = [space.n for space in bra_spaces]
+        flattened_shape = (np.prod(ket_shape, dtype=int), np.prod(bra_shape, dtype=int))
+
+        flattened_values = self[(*ket_spaces, *bra_spaces)]
+        flattened_values = np.reshape(flattened_values, flattened_shape)
+        return flattened_values
+
+    @classmethod
+    def _formal_inflate(cls, flattened, ket_spaces, bra_spaces, *, copy=True):
+        wrapped_spaces = [*ket_spaces, *bra_spaces]
         wrapped_shape = [space.n for space in wrapped_spaces]
-        wrapped_values = np.reshape(flattened_values, wrapped_shape)
-
-        if copy:
-            wrapped_values = np.copy(wrapped_values)
-
-        tensor = NumpyQTensor(wrapped_spaces, wrapped_values)
-
-        return tensor
+        wrapped_values = np.reshape(flattened, wrapped_shape)
+        return NumpyQTensor(wrapped_spaces, wrapped_values)

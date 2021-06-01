@@ -185,47 +185,14 @@ class QTensor(abc.ABC):
     def broadcast(self, broadcast_spaces: Iterable[Space]):
         pass
 
-    def flatten(self):
-        num_spaces = []
-        ket_spaces = []
-        bra_spaces = []
-        for space in self.spaces:
-            if isinstance(space, KetSpace):
-                ket_spaces.append(space)
-            elif isinstance(space, BraSpace):
-                bra_spaces.append(space)
-            else:
-                num_spaces.append(space)
+    def flatten(self, ket_spaces=None, bra_spaces=None):
+        pass
 
-        num_spaces = tuple(sorted(num_spaces, key=lambda sp: (-sp.n, id(sp))))
-        ket_spaces = tuple(sorted(ket_spaces, key=lambda sp: (-sp.n, id(sp))))
-        bra_spaces = tuple(sorted(bra_spaces, key=lambda sp: (-sp.n, id(sp.ket))))
-
-        flattened_num_space = np.prod([space.n for space in num_spaces], dtype=int)
-        flattened_ket_space = np.prod([space.n for space in ket_spaces], dtype=int)
-        flattened_bra_space = np.prod([space.n for space in bra_spaces], dtype=int)
-
-        if flattened_num_space == 1:
-            flattened_spaces = ket_spaces, bra_spaces
-            flattened_shape = [flattened_ket_space, flattened_bra_space]
-        else:
-            flattened_spaces = num_spaces, ket_spaces, bra_spaces
-            flattened_shape = [flattened_num_space, flattened_ket_space, flattened_bra_space]
-
-        flattened_values = self[(*num_spaces, *ket_spaces, *bra_spaces)]
-        flattened_values = np.reshape(flattened_values, flattened_shape)
-
-        return flattened_spaces, flattened_values
-
-    @staticmethod
-    def inflate(flattened_values, flattened_spaces, *, copy=True):
-        from .numpy import NumpyQTensor
-        return NumpyQTensor.inflate(flattened_values, flattened_spaces)
-
-    @property
-    def flattened_values(self):
-        _, flattened_values = self.flatten()
-        return flattened_values
+    @classmethod
+    @abc.abstractmethod
+    def inflate(cls, flattened_values, ket_spaces, bra_spaces, *, copy=True):
+        from .sparse import SparseQTensor
+        return SparseQTensor.inflate(flattened_values, ket_spaces, bra_spaces, copy=copy)
 
     # psi & rho
 

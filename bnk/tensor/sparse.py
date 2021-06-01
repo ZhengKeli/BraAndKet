@@ -273,3 +273,54 @@ class SparseQTensor(FormalQTensor):
             raise TypeError("NumSpace is not supported yet!")
 
         return new_tensor
+
+    def _formal_flatten(self, ket_spaces, bra_spaces, *, sparse=False):
+        ket_axes = tuple(self._spaces.index(space) for space in ket_spaces)
+        bra_axes = tuple(self._spaces.index(space) for space in bra_spaces)
+
+        ket_shape = tuple(space.n for space in ket_spaces)
+        bra_shape = tuple(space.n for space in bra_spaces)
+        new_shape = (np.prod(ket_shape, dtype=int), np.prod(bra_shape, dtype=int))
+
+        new_ket_indices = []
+        new_bra_indices = []
+        new_values = []
+        for coordinate, value in self._values.items():
+            ket_coordinate = tuple(coordinate[axis] for axis in ket_axes)
+            bra_coordinate = tuple(coordinate[axis] for axis in bra_axes)
+            ket_index = np.ravel_multi_index(ket_coordinate, ket_shape)
+            bra_index = np.ravel_multi_index(bra_coordinate, bra_shape)
+            new_ket_indices.append(ket_index)
+            new_bra_indices.append(bra_index)
+            new_values.append(value)
+
+        if sparse:
+            from scipy.sparse import coo_matrix
+            new_matrix = coo_matrix((new_values, (new_ket_indices, new_bra_indices)), new_shape)
+            return new_matrix
+        else:
+            new_array = np.zeros(new_shape)
+            new_array.put(np.ravel_multi_index((new_ket_indices, new_bra_indices), new_shape), new_values)
+            return new_array
+
+    @classmethod
+    def _formal_inflate(cls, flattened, ket_spaces, bra_spaces, *, copy=True):
+        ket_spaces = tuple(ket_spaces)
+        bra_spaces = tuple(bra_spaces)
+        ket_shape = tuple(space.n for space in ket_spaces)
+        bra_shape = tuple(space.n for space in bra_spaces)
+        try:
+            from scipy.sparse import coo_matrix
+            flattened = coo_matrix(flattened)
+            values = (
+                ((np.unravel_index(row, ket_shape), np.unravel_index(col, bra_shape)), val)
+                for row, col, val in zip(flattened.row, flattened.col, flattened.data)
+            )
+            return SparseQTensor((*ket_spaces, *bra_spaces), values)
+        except ImportError:
+            rows, cols = np.nonzero(flattened)
+            values = (
+                ((np.unravel_index(row, ket_shape), np.unravel_index(col, bra_shape)), flattened[rows, cols])
+                for row, col in zip(rows, cols)
+            )
+            return SparseQTensor((*ket_spaces, *bra_spaces), values)
