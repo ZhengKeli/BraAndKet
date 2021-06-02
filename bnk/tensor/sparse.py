@@ -1,4 +1,4 @@
-from typing import Tuple, Union, Iterable, Any
+from typing import Tuple, Union, Iterable
 
 import numpy as np
 
@@ -149,7 +149,7 @@ class SparseQTensor(FormalQTensor):
         def iter_new_values():
             for coordinate, value in self.values:
                 yield coordinate, value
-            for other_coordinate, other_value in other.values.items():
+            for other_coordinate, other_value in other.values:
                 coordinate = tuple(other_coordinate[axis] for axis in self_axes)
                 value = other_value
                 yield coordinate, value

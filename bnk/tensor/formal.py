@@ -104,12 +104,11 @@ class FormalQTensor(QTensor, abc.ABC):
         if not isinstance(other, QTensor):
             raise TypeError(f"Can not perform + operation with {other}: this QTensor is not zero-dimensional.")
 
-        if self.spaces == other.spaces:
+        if set(self.spaces) == set(other.spaces):
             return self._formal_add(other)
 
-        spaces_broadcast = self.spaces.union(other.spaces)
-        self_broadcast = self.broadcast(spaces_broadcast)
-        other_broadcast = other.broadcast(spaces_broadcast)
+        self_broadcast = self.broadcast(other.spaces)
+        other_broadcast = other.broadcast(self.spaces)
         return self_broadcast + other_broadcast
 
     @abc.abstractmethod
