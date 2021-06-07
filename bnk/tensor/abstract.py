@@ -219,6 +219,20 @@ class QTensor(abc.ABC):
 
     @property
     def is_rho(self):
+        return self.is_operator
+
+    def as_rho(self, normalize=True):
+        if not self.is_rho:
+            raise ValueError("This tensor is not a density matrix!")
+        rho = self
+
+        if normalize:
+            rho /= rho.trace()
+
+        return rho
+
+    @property
+    def is_operator(self):
         spaces = set(self.spaces)
         while spaces:
             space = spaces.pop()
@@ -230,12 +244,7 @@ class QTensor(abc.ABC):
                 spaces.remove(space.ct)
         return True
 
-    def as_rho(self, normalize=True):
-        if not self.is_rho:
-            raise ValueError("This tensor is not a density matrix!")
-        rho = self
-
-        if normalize:
-            rho /= rho.trace()
-
-        return rho
+    def as_operator(self):
+        if not self.is_operator:
+            raise ValueError("This tensor is not an operator!")
+        return self
