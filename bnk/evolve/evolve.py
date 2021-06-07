@@ -405,32 +405,28 @@ def one_step_rk4(t, v, dt, dv):
 # utils: wrap & unwrap
 
 def unwrap(value: QTensor, operators, reduce=True, dtype=np.complex64):
-    org_spaces = value.spaces
     if reduce:
         reduction = PrunedKetSpace.from_initial([value], [*structured_iter(operators)])
-        value = reduction.reduce(value)
-        operators = reduction.reduce(operators)
+        value = reduction.prune(value)
+        operators = reduction.prune(operators)
     else:
         reduction = None
         operators = structured_map(operators, lambda op: op.broadcast(value.spaces))
 
-    flat_spaces, value = value.flatten()
+    (ket_spaces, bra_spaces), value = value.flatten(return_spaces=True)
     value = np.asarray(value, dtype=dtype)
 
-    operators = structured_map(operators, lambda op: np.asarray(op.flattened_values, dtype=dtype))
+    operators = structured_map(operators, lambda op: np.asarray(op.flatten(), dtype=dtype))
 
-    wrapping = org_spaces, flat_spaces, reduction
+    wrapping = (ket_spaces, bra_spaces), reduction
     return value, operators, wrapping
 
 
 def wrap(value, wrapping) -> QTensor:
-    org_spaces, flat_spaces, reduction = wrapping
+    (ket_spaces, bra_spaces), reduction = wrapping
+    value = QTensor.inflate(value, ket_spaces, bra_spaces)
     if reduction:
-        value = QTensor.wrap(value, flat_spaces)
-        value = reduction.inflate(value)
-        value = value.transposed(org_spaces)
-    else:
-        value = QTensor.wrap(value, flat_spaces, org_spaces)
+        value = reduction.restore(value)
     return value
 
 
