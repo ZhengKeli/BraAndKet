@@ -22,7 +22,7 @@ pip install braandket
 Then you can import this library with name `bnk`
 
 ```python
-import bnk
+import braandket as bnk
 ```
 
 ## KetSpace
