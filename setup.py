@@ -6,7 +6,7 @@ with open("README.md", "r") as file:
 setuptools.setup(
     # id
     name="BraAndKet",
-    version="0.7.1",
+    version="0.7.2",
 
     # info
     classifiers=[
