@@ -228,7 +228,7 @@ class FormalQTensor(QTensor, abc.ABC):
         flattened = self._formal_flatten(ket_spaces, bra_spaces)
 
         if return_spaces:
-            return (ket_spaces, bra_spaces), flattened
+            return flattened, ket_spaces, bra_spaces
         else:
             return flattened
 
