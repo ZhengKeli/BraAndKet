@@ -413,7 +413,7 @@ def unwrap(value: QTensor, operators, reduce=True, dtype=np.complex64):
         reduction = None
         operators = structured_map(operators, lambda op: op.broadcast(value.spaces))
 
-    (ket_spaces, bra_spaces), value = value.flatten(return_spaces=True)
+    value, ket_spaces, bra_spaces = value.flatten(return_spaces=True)
     value = np.asarray(value, dtype=dtype)
 
     operators = structured_map(operators, lambda op: np.asarray(op.flatten(), dtype=dtype))

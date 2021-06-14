@@ -187,7 +187,7 @@ class SparseQTensor(FormalQTensor):
         return SparseQTensor(new_spaces, new_values)
 
     def _formal_matmul(self, other):
-        from bnk import NumpyQTensor
+        from ..tensor import NumpyQTensor
         if not isinstance(other, (NumpyQTensor, SparseQTensor)):
             raise TypeError(f"Unsupported type {type(other)}")
 
