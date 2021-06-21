@@ -49,7 +49,7 @@ class NumpyQTensor(FormalQTensor):
 
         return values
 
-    def __copy__(self):
+    def copy(self):
         return NumpyQTensor(self.spaces, self.values.copy())
 
     def __repr__(self):

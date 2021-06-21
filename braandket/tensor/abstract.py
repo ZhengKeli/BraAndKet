@@ -54,11 +54,11 @@ class QTensor(abc.ABC):
         return np.all(self_values == other_values)
 
     @abc.abstractmethod
-    def __copy__(self):
-        pass
-
     def copy(self):
         return self.__copy__()
+
+    def __copy__(self):
+        return self.copy()
 
     def __repr__(self):
         spaces = tuple(self.spaces)

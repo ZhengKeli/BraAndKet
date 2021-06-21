@@ -123,7 +123,7 @@ class SparseQTensor(FormalQTensor):
         from .numpy import NumpyQTensor
         return NumpyQTensor(spaces, values)
 
-    def __copy__(self):
+    def copy(self):
         return SparseQTensor(self.spaces, self.values)
 
     def __repr__(self):
