@@ -267,7 +267,7 @@ class SparseQTensor(FormalQTensor):
 
         return new_tensor
 
-    def _formal_flatten(self, ket_spaces, bra_spaces, *, dtype, sparse=False):
+    def _formal_flatten(self, ket_spaces, bra_spaces, *, dtype, sparse):
         ket_axes = tuple(self.spaces.index(space) for space in ket_spaces)
         bra_axes = tuple(self.spaces.index(space) for space in bra_spaces)
 

@@ -141,14 +141,20 @@ class NumpyQTensor(FormalQTensor):
 
         return new_tensor
 
-    def _formal_flatten(self, ket_spaces, bra_spaces, *, dtype):
+    def _formal_flatten(self, ket_spaces, bra_spaces, *, dtype, sparse):
         ket_shape = [space.n for space in ket_spaces]
         bra_shape = [space.n for space in bra_spaces]
         flattened_shape = (np.prod(ket_shape, dtype=int), np.prod(bra_shape, dtype=int))
 
         flattened_values = self.get(*ket_spaces, *bra_spaces, dtype=dtype)
         flattened_values = np.reshape(flattened_values, flattened_shape)
-        return flattened_values
+
+        if sparse:
+            from scipy.sparse import coo_matrix
+            flattened_matrix = coo_matrix(flattened_values)
+            return flattened_matrix
+        else:
+            return flattened_values
 
     @classmethod
     def _formal_inflate(cls, flattened, ket_spaces, bra_spaces, *, copy=True):
