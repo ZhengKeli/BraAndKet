@@ -141,12 +141,12 @@ class NumpyQTensor(FormalQTensor):
 
         return new_tensor
 
-    def _formal_flatten(self, ket_spaces, bra_spaces):
+    def _formal_flatten(self, ket_spaces, bra_spaces, *, dtype):
         ket_shape = [space.n for space in ket_spaces]
         bra_shape = [space.n for space in bra_spaces]
         flattened_shape = (np.prod(ket_shape, dtype=int), np.prod(bra_shape, dtype=int))
 
-        flattened_values = self[(*ket_spaces, *bra_spaces)]
+        flattened_values = self.get(*ket_spaces, *bra_spaces, dtype=dtype)
         flattened_values = np.reshape(flattened_values, flattened_shape)
         return flattened_values
 

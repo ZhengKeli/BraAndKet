@@ -192,7 +192,7 @@ class QTensor(abc.ABC):
     def broadcast(self, broadcast_spaces: Iterable[Space]):
         pass
 
-    def flatten(self, ket_spaces=None, bra_spaces=None, *, return_spaces=False):
+    def flatten(self, ket_spaces=None, bra_spaces=None, *, dtype=None, return_spaces=False):
         pass
 
     @classmethod

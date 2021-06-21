@@ -199,10 +199,10 @@ class FormalQTensor(QTensor, abc.ABC):
         return self._formal_broadcast(ket_spaces, num_spaces)
 
     @abc.abstractmethod
-    def _formal_flatten(self, ket_spaces, bra_spaces):
+    def _formal_flatten(self, ket_spaces, bra_spaces, *, dtype):
         pass
 
-    def flatten(self, ket_spaces=None, bra_spaces=None, *, return_spaces=False):
+    def flatten(self, ket_spaces=None, bra_spaces=None, *, dtype=None, return_spaces=False):
         _ket_spaces = [space for space in self.spaces if isinstance(space, KetSpace)]
         _ket_spaces = tuple(sorted(_ket_spaces, key=lambda sp: (-sp.n, id(sp))))
 
@@ -225,7 +225,7 @@ class FormalQTensor(QTensor, abc.ABC):
             remained_ket_spaces = (space for space in _ket_spaces if space not in bra_spaces_set)
             ket_spaces = (*ket_spaces, *remained_ket_spaces)
 
-        flattened = self._formal_flatten(ket_spaces, bra_spaces)
+        flattened = self._formal_flatten(ket_spaces, bra_spaces, dtype=dtype)
 
         if return_spaces:
             return flattened, ket_spaces, bra_spaces

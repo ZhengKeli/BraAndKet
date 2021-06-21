@@ -267,7 +267,7 @@ class SparseQTensor(FormalQTensor):
 
         return new_tensor
 
-    def _formal_flatten(self, ket_spaces, bra_spaces, *, sparse=False):
+    def _formal_flatten(self, ket_spaces, bra_spaces, *, dtype, sparse=False):
         ket_axes = tuple(self.spaces.index(space) for space in ket_spaces)
         bra_axes = tuple(self.spaces.index(space) for space in bra_spaces)
 
@@ -298,10 +298,10 @@ class SparseQTensor(FormalQTensor):
 
         if sparse:
             from scipy.sparse import coo_matrix
-            new_matrix = coo_matrix((new_values, (new_ket_indices, new_bra_indices)), new_shape)
+            new_matrix = coo_matrix((new_values, (new_ket_indices, new_bra_indices)), new_shape, dtype=dtype)
             return new_matrix
         else:
-            new_array = self[(*ket_spaces, *bra_spaces)]
+            new_array = self.get(*ket_spaces, *bra_spaces, dtype=dtype)
             new_array = np.reshape(new_array, new_shape)
             return new_array
 
