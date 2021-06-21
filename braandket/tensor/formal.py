@@ -27,25 +27,25 @@ class FormalQTensor(QTensor, abc.ABC):
         return self._spaces
 
     @abc.abstractmethod
-    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):
+    def _formal_get(self, *items: Tuple[Space, Union[int, slice, tuple]], dtype):
         """
 
         :param items: tuples of space and corresponding slice
         :return: values. The type is recommended to be numpy.ndarray or any compatible data types.
         """
 
-    def __getitem__(self, items):
+    def get(self, *items, dtype=None):
         if isinstance(items, dict):
             items = items.items()
 
         if isinstance(items, Space):
             formal_items = ((items, slice(None)),)
-            return self._formal_getitem(*formal_items)
+            return self._formal_get(*formal_items, dtype=dtype)
 
         items = tuple(items)
 
         if len(items) == 0:
-            return self._formal_getitem()
+            return self._formal_get(dtype=dtype)
 
         formal_items = []
         for item in items:
@@ -80,7 +80,7 @@ class FormalQTensor(QTensor, abc.ABC):
                 raise ValueError("Unsupported argument for getting item: " + str(item))
             formal_items = (item,)
 
-        return self._formal_getitem(*formal_items)
+        return self._formal_get(*formal_items, dtype=dtype)
 
     # linear operations
 

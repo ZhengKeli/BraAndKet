@@ -38,7 +38,7 @@ class SparseQTensor(FormalQTensor):
     def values(self):
         return self._values.items()
 
-    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):
+    def _formal_get(self, *items: Tuple[Space, Union[int, slice, tuple]], dtype):
         items = tuple(items)
         spaces = tuple(spa for spa, _ in items)
         axes = tuple(self.spaces.index(space) for space in spaces)
@@ -107,9 +107,9 @@ class SparseQTensor(FormalQTensor):
                 assert False
 
         if len(new_shape) == 0:
-            return np.sum(new_values)
+            return np.sum(new_values, dtype=dtype)
 
-        new_values = np.asarray(new_values)
+        new_values = np.asarray(new_values, dtype=dtype)
         new_coordinates = tuple(tuple(new_coordinate) for new_coordinate in new_coordinates)
         new_array = np.zeros(new_shape, dtype=new_values.dtype)
 

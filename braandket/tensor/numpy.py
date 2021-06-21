@@ -27,7 +27,7 @@ class NumpyQTensor(FormalQTensor):
     def values(self):
         return self._values
 
-    def _formal_getitem(self, *items: Tuple[Space, Union[int, slice, tuple]]):
+    def _formal_get(self, *items: Tuple[Space, Union[int, slice, tuple]], dtype):
         axis_list = []
         slice_list = []
         for spa, sli in items:

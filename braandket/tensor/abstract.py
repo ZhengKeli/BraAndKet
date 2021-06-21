@@ -23,8 +23,15 @@ class QTensor(abc.ABC):
         """
 
     @abc.abstractmethod
-    def __getitem__(self, items):
+    def get(self, *items, dtype=None):
         """ get specific values from this tensor """
+        pass
+
+    def __getitem__(self, items):
+        if isinstance(items, tuple):
+            return self.get(*items)
+        else:
+            return self.get(items)
 
     def __iter__(self):
         """ iteration is NOT allowed """
