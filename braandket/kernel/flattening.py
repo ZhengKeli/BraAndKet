@@ -59,6 +59,8 @@ class FlatteningRho(Flattening, abc.ABC):
 # schrodinger pade
 
 class SchrodingerPsiPade(Static, FlatteningPsi):
+    def __init__(self, model, time, value):
+        super().__init__(model, time, value)
 
     @classmethod
     def compute_static(cls, model, psi, span, **kwargs):
@@ -70,6 +72,9 @@ class SchrodingerPsiPade(Static, FlatteningPsi):
 
 
 class SchrodingerRhoPade(Static, FlatteningRho):
+    def __init__(self, model, time, value):
+        super().__init__(model, time, value)
+
     @classmethod
     def compute_static(cls, model, rho, span, **kwargs):
         hb, hmt, _ = model
@@ -95,6 +100,9 @@ class Lindblad(StaticStepping, FlatteningRho, abc.ABC):
 
 
 class LindbladEuler(Lindblad):
+    def __init__(self, model, time, value, *, dt=None):
+        super().__init__(model, time, value, dt=dt)
+
     @classmethod
     def compute_static_stepping(cls, model, rho, n, dt, **kwargs):
         k_sh, hmt, gamma_list, deco_list, deco_ct_list, deco_ct_deco_list = model
@@ -112,6 +120,9 @@ class LindbladEuler(Lindblad):
 
 
 class LindbladRk4(Lindblad):
+    def __init__(self, model, time, value, *, dt=None):
+        super().__init__(model, time, value, dt=dt)
+
     @classmethod
     def compute_static_stepping(cls, model, rho, n, dt, **kwargs):
         k_sh, hmt, gamma_list, deco_list, deco_ct_list, deco_ct_deco_list = model

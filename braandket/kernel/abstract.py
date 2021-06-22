@@ -6,13 +6,14 @@ import numpy as np
 # kernel
 
 class Kernel(abc.ABC):
-    def __init__(self, model, time, value):
+    def __init__(self, model, time, value, **kwargs):
         model, value, wrapping = self.init_model(model, value)
 
         self._wrapping = wrapping
         self._model = model
         self._time = time
         self._value = value
+        self._args = kwargs
 
     @property
     def time(self):
@@ -50,7 +51,12 @@ class Kernel(abc.ABC):
         t = self._time
         value = self._value
 
-        value = self.compute(model, t, value, span, **kwargs)
+        args = {**self._args}
+        for k, arg in kwargs.items():
+            if args.get(k) is None:
+                args[k] = arg
+
+        value = self.compute(model, t, value, span, **args)
         t = t + span
 
         self._time = t
@@ -94,10 +100,13 @@ class Static(Kernel, abc.ABC):
 
 
 class StaticStepping(Static):
+    def __init__(self, model, time, value, *, dt=None, **kwargs):
+        super().__init__(model, time, value, dt=dt, **kwargs)
+
     @classmethod
-    def compute_static(cls, model, value, span, dt=None, **kwargs):
+    def compute_static(cls, model, value, span, *, dt=None, **kwargs):
         if dt is None:
-            raise ValueError("Argument dt is required")
+            raise ValueError("Parameter dt is required")
 
         tiled_n = int(np.ceil(span / dt))
         tiled_dt = span / tiled_n
