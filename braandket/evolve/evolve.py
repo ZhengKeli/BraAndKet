@@ -246,7 +246,7 @@ def schrodinger_kernel_euler_rho(
         hb, dt, n):
     kt = (dt / 1j / hb)
     for i in range(n):
-        rho += kt * (hmt @ rho @ hmt)
+        rho += kt * (hmt @ rho - rho @ hmt)
     return rho
 
 
@@ -272,10 +272,13 @@ def schrodinger_kernel_rk4_rho(
     k = -1j / hb
     dt2 = dt / 2.0
     for i in range(n):
-        k1 = k * (hmt @ rho @ hmt)
-        k2 = k * (hmt @ (rho + dt2 * k1) @ hmt)
-        k3 = k * (hmt @ (rho + dt2 * k2) @ hmt)
-        k4 = k * (hmt @ (rho + dt * k3) @ hmt)
+        k1 = k * (hmt @ rho - rho @ hmt)
+        rho1 = rho + dt2 * k1
+        k2 = k * (hmt @ rho1 - rho1 @ hmt)
+        rho2 = rho + dt2 * k2
+        k3 = k * (hmt @ rho2 - rho2 @ hmt)
+        rho3 = rho + dt * k3
+        k4 = k * (hmt @ rho3 - rho3 @ hmt)
         rho += dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
     return rho
 
