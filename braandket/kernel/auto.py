@@ -1,4 +1,4 @@
-from .flattening import SchrodingerRhoPade, SchrodingerPsiPade, LindbladEuler, LindbladRk4
+from .numpy import *
 from ..tensor import QTensor
 
 
@@ -37,9 +37,9 @@ def AutoKernel(*,
                 method = 'pade' if method is None else method
                 if method == 'pade':  # pade approximation
                     if is_rho:
-                        kernel = SchrodingerRhoPade(model, time, value)
+                        kernel = NumpyStaticSchrodingerRhoPadeKernel(model, time, value)
                     else:
-                        kernel = SchrodingerPsiPade(model, time, value)
+                        kernel = NumpyStaticSchrodingerPsiPadeKernel(model, time, value)
                 else:
                     raise NotImplementedError()
             else:
@@ -51,9 +51,9 @@ def AutoKernel(*,
             if backend == 'numpy':
                 method = 'euler' if method is None else method
                 if method == 'euler':
-                    kernel = LindbladEuler(model, time, value, dt=dt)
+                    kernel = NumpyStaticLindbladEulerKernel(model, time, value, dt=dt)
                 elif method == 'rk4':
-                    kernel = LindbladRk4(model, time, value, dt=dt)
+                    kernel = NumpyStaticLindbladRk4Kernel(model, time, value, dt=dt)
                 else:
                     raise NotImplementedError()
             else:
