@@ -78,7 +78,7 @@ class Kernel(abc.ABC):
 
 # static
 
-class Static(Kernel, abc.ABC):
+class StaticMixin(Kernel, abc.ABC):
 
     @classmethod
     def init_model(cls, model, value):
@@ -99,7 +99,7 @@ class Static(Kernel, abc.ABC):
         pass
 
 
-class StaticStepping(Static):
+class StaticSteppingMixin(StaticMixin):
     def __init__(self, model, time, value, *, dt=None, **kwargs):
         super().__init__(model, time, value, dt=dt, **kwargs)
 

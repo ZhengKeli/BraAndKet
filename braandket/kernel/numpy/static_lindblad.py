@@ -3,12 +3,12 @@ import abc
 import numpy as np
 
 from .numpy import NumpyRhoMixin
-from ..abstract import StaticStepping
+from ..abstract import StaticSteppingMixin
 
 
 # mixins
 
-class NumpyStaticLindbladSteppingMixin(StaticStepping, NumpyRhoMixin, abc.ABC):
+class NumpyStaticLindbladSteppingMixin(StaticSteppingMixin, NumpyRhoMixin, abc.ABC):
     @classmethod
     def init_model(cls, model, value):
         (hb, hmt, deco), value, wrapping = super().init_model(model, value)

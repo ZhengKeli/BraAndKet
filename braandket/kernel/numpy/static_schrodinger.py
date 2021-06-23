@@ -1,19 +1,19 @@
 import abc
 
 from .numpy import NumpyMixin, NumpyPsiMixin, NumpyRhoMixin
-from ..abstract import Static, StaticStepping
+from ..abstract import StaticMixin, StaticSteppingMixin
 
 
 # mixin
 
-class NumpyStaticSchrodingerMixin(Static, NumpyMixin, abc.ABC):
+class NumpyStaticSchrodingerMixin(StaticMixin, NumpyMixin, abc.ABC):
     @classmethod
     def init_model(cls, model, value):
         (hb, hmt, _), value, wrapping = super().init_model(model, value)
         return (hb, hmt), value, wrapping
 
 
-class NumpyStaticSchrodingerSteppingMixin(NumpyStaticSchrodingerMixin, StaticStepping, abc.ABC):
+class NumpyStaticSchrodingerSteppingMixin(NumpyStaticSchrodingerMixin, StaticSteppingMixin, abc.ABC):
     pass
 
 
