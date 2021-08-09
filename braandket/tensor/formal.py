@@ -222,8 +222,8 @@ class FormalQTensor(QTensor, abc.ABC):
         else:
             bra_spaces = tuple(bra_spaces)
             bra_spaces_set = set(bra_spaces)
-            remained_ket_spaces = (space for space in _ket_spaces if space not in bra_spaces_set)
-            ket_spaces = (*ket_spaces, *remained_ket_spaces)
+            remained_bra_spaces = (space for space in _bra_spaces if space not in bra_spaces_set)
+            bra_spaces = (*bra_spaces, *remained_bra_spaces)
 
         flattened = self._formal_flatten(ket_spaces, bra_spaces, dtype=dtype, sparse=sparse)
 
