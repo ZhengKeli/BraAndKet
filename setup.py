@@ -34,5 +34,6 @@ setuptools.setup(
     ],
     extras_require={
         "sparse matrix": ['scipy'],
+        "pade": ['scipy'],
     },
 )
