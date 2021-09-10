@@ -1,5 +1,5 @@
 import abc
-from typing import Tuple, Union, Iterable, Set
+from typing import Tuple, Union, Iterable
 
 import numpy as np
 
@@ -238,7 +238,18 @@ class FormalQTensor(QTensor, abc.ABC):
         pass
 
     @classmethod
-    def inflate(cls, flattened, ket_spaces: Iterable[KetSpace], bra_spaces: Iterable[BraSpace], *, copy=True):
+    def inflate(
+            cls,
+            flattened,
+            ket_spaces: Iterable[KetSpace],
+            bra_spaces: Iterable[BraSpace] = None,
+            *, copy=True, **kwargs
+    ):
         ket_spaces = tuple(ket_spaces)
-        bra_spaces = tuple(bra_spaces)
+
+        if bra_spaces is None:
+            bra_spaces = tuple(ket_space.ct for ket_space in ket_spaces)
+        else:
+            bra_spaces = tuple(bra_spaces)
+
         return cls._formal_inflate(flattened, ket_spaces, bra_spaces, copy=copy)

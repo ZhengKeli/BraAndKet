@@ -1,5 +1,5 @@
 import abc
-from typing import Iterable, Set, Tuple
+from typing import Iterable, Tuple, Optional
 
 import numpy as np
 
@@ -197,9 +197,18 @@ class QTensor(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def inflate(cls, flattened_values, ket_spaces, bra_spaces, *, copy=True):
-        from .sparse import SparseQTensor
-        return SparseQTensor.inflate(flattened_values, ket_spaces, bra_spaces, copy=copy)
+    def inflate(cls,
+            flattened_values,
+            ket_spaces: Iterable[KetSpace],
+            bra_spaces: Optional[Iterable[BraSpace]] = None,
+            *, copy=True, sparse=True, **kwargs
+    ):
+        if sparse:
+            from .sparse import SparseQTensor
+            return SparseQTensor.inflate(flattened_values, ket_spaces, bra_spaces, copy=copy, **kwargs)
+        else:
+            from .numpy import NumpyQTensor
+            return NumpyQTensor.inflate(flattened_values, ket_spaces, bra_spaces, copy=copy, **kwargs)
 
     # psi & rho
 
