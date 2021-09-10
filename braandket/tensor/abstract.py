@@ -264,3 +264,19 @@ class QTensor(abc.ABC):
         if not self.is_operator:
             raise ValueError("This tensor is not an operator!")
         return self
+
+    def normalize(self):
+        if self.is_psi:
+            amp = (self.ct @ self).scalar()
+            prob = np.abs(np.conj(amp) @ amp)
+            scale = np.sqrt(prob)
+            return self / scale
+        elif self.ct.is_psi:
+            return self.ct.normalize()
+        elif self.is_rho:
+            prob = np.abs(self.trace(*self.spaces))
+            return self / prob
+        elif self.is_scalar:
+            return self / self.scalar()
+        else:
+            raise TypeError("Only state vector (psi) or density matrix (rho) can be normalized.")
