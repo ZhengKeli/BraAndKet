@@ -115,7 +115,6 @@ class FormalQTensor(QTensor, abc.ABC):
     def _formal_mul(self, other):
         """
 
-        :param new_spaces: new spaces
         :param self: self tensor
         :param other: multiplying scalar
         :return: result of multiplication
