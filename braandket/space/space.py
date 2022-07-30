@@ -112,6 +112,9 @@ class KetSpace(HSpace):
         return self._bra
 
     def eigenstate(self, index, *, sparse=True, dtype=np.float32):
+        index = int(index)
+        if not (0 <= index < self.n):
+            raise ValueError(f"Illegal index: should be 0<=i<n, found i={index}, n={self.n}")
         if sparse:
             from ..tensor import SparseQTensor
             coordinate = (index,)
