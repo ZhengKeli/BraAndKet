@@ -15,18 +15,6 @@ class Space(abc.ABC):
     def name(self):
         pass
 
-    @property
-    def is_ket(self):
-        return isinstance(self, KetSpace)
-
-    @property
-    def is_bra(self):
-        return isinstance(self, BraSpace)
-
-    @property
-    def is_num(self):
-        return isinstance(self, NumSpace)
-
 
 class NumSpace(Space):
     """ NOT supported yet """

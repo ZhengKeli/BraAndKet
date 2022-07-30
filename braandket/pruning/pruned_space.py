@@ -1,7 +1,7 @@
 from typing import Iterable
 
 from .utils import extract_dirty_eigenstates
-from ..space import KetSpace
+from ..space import BraSpace, KetSpace
 from ..tensor import QTensor
 from ..utils import structured_map, sum
 
@@ -37,11 +37,11 @@ class PrunedKetSpace(KetSpace):
         has_ket = False
         has_bra = False
         for space in tensor.spaces:
-            if space.is_ket:
+            if isinstance(space, KetSpace):
                 has_ket = True
                 if has_bra:
                     break
-            elif space.is_bra:
+            elif isinstance(space, BraSpace):
                 has_bra = True
                 if has_ket:
                     break
@@ -58,9 +58,9 @@ class PrunedKetSpace(KetSpace):
         has_ket = False
         has_bra = False
         for space in tensor.spaces:
-            if space.is_ket:
+            if isinstance(space, KetSpace):
                 has_ket = True
-            elif space.is_bra:
+            elif isinstance(space, BraSpace):
                 has_bra = True
         if has_ket:
             tensor = self._op_restore @ tensor
