@@ -98,7 +98,7 @@ class BraSpace(HSpace):
             bra = ket.bra
             warnings.warn(
                 "Please avoid creating a BraSpace yourself. "
-                "To get a BraSpace, use .ct or .bra property on KetSpace instance.",
+                "Instead, use property \".ct\" on KetSpace instance.",
                 category=UserWarning, stacklevel=2)
             return bra
         except AttributeError:
