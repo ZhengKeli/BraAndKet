@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Any, Optional
 
+from braandket.backends import Backend
 from .space import Space
 
 
@@ -17,3 +18,20 @@ class NumSpace(Space):
     @property
     def name(self) -> Optional[str]:
         return self._name
+
+    # tensor constructors
+
+    def zeros(self, *, backend: Optional[Backend] = None):
+        from braandket.tensor import zeros
+        return zeros(self, backend=backend)
+
+    def ones(self, *, backend: Optional[Backend] = None):
+        from braandket.tensor import ones
+        return ones(self, backend=backend)
+
+    def full(self, value: Any, *, backend: Optional[Backend] = None):
+        return self.ones(backend=backend) * value
+
+    def values(self, *, values: Any, backend: Optional[Backend] = None):
+        from braandket.tensor import NumericTensor
+        return NumericTensor.of(values, [self], backend=backend)

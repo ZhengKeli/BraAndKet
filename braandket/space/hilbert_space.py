@@ -2,8 +2,7 @@ import abc
 import warnings
 from typing import Optional
 
-import numpy as np
-
+from braandket.backends import Backend
 from .space import Space
 
 
@@ -56,40 +55,23 @@ class KetSpace(HSpace):
     def bra(self) -> 'BraSpace':
         return self._bra
 
-    # tensors
+    # tensor constructors
 
-    def eigenstate(self, index, *, sparse=True, dtype=np.float32):
-        index = int(index)
-        if not (0 <= index < self.n):
-            raise ValueError(f"Illegal index: should be 0<=i<n, found i={index}, n={self.n}")
-        if sparse:
-            from ..tensor import SparseQTensor
-            coordinate = (index,)
-            value = np.asarray(True, dtype=dtype)
-            return SparseQTensor([self], [(coordinate, value)])
-        else:
-            from ..tensor import NumpyQTensor
-            values = np.zeros([self.n], dtype=dtype)
-            values[index] = 1
-            return NumpyQTensor([self], values)
+    def eigenstate(self, index: int, *, backend: Optional[Backend] = None):
+        from braandket.tensor import eigenstate
+        return eigenstate(self, index, backend=backend)
 
-    def identity(self, *, sparse=True, dtype=np.float32):
-        if sparse:
-            from ..tensor import SparseQTensor
-            value = np.asarray(True, dtype=dtype)
-            values = (((i, i), value) for i in range(self.n))
-            return SparseQTensor([self, self.ct], values)
-        else:
-            from ..tensor import NumpyQTensor
-            values = np.eye(self.n, dtype=dtype)
-            return NumpyQTensor([self, self.ct], values)
+    def operator(self, ket_index: int, bra_index: int, *, backend: Optional[Backend] = None):
+        from braandket.tensor import operator
+        return operator(self, ket_index, bra_index, backend=backend)
 
-    def operator(self, ket_index, bra_index, *, sparse=True, dtype=np.float32):
-        return self.eigenstate(ket_index, sparse=sparse, dtype=dtype) @ \
-               self.eigenstate(bra_index, sparse=sparse, dtype=dtype).ct
+    def projector(self, index: int, *, backend: Optional[Backend] = None):
+        from braandket.tensor import projector
+        return projector(self, index, backend=backend)
 
-    def projector(self, index, *, sparse=True, dtype=np.float32):
-        return self.operator(index, index, sparse=sparse, dtype=dtype)
+    def identity(self, *, backend: Optional[Backend] = None):
+        from braandket.tensor import identity
+        return identity(self, backend=backend)
 
 
 class BraSpace(HSpace):
