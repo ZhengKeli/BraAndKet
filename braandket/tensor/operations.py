@@ -90,7 +90,7 @@ def _broadcast(tensor: QTensor, *spaces: Space) -> QTensor:
 
     # construct new tensor
     new_spaces = (*spaces, *tensor._spaces)
-    new_values = tensor.backend.expand(tensor._values, axes=tuple(range(len(spaces))))
+    new_values = tensor.backend.expand(tensor._values, axes=range(len(spaces)), sizes=(space.n for space in spaces))
     return tensor.spawn(new_values, new_spaces)
 
 

@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Generic, Iterable, Union
+from typing import Any, Generic, Iterable, Optional, Union
 from typing import TypeVar
 
 
@@ -95,7 +95,7 @@ class Backend(Generic[ValuesType], abc.ABC):
         pass
 
     @abc.abstractmethod
-    def expand(self, values: ValuesType, axes: Union[int, Iterable[int]]) -> ValuesType:
+    def expand(self, values: ValuesType, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> ValuesType:
         pass
 
     @abc.abstractmethod

@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Union
+from typing import Any, Iterable, Optional, Union
 
 import numpy as np
 
@@ -76,8 +76,14 @@ class NumpyBackend(Backend[np.ndarray]):
     def transpose(self, values: np.ndarray, *, axes: Iterable[int]) -> np.ndarray:
         return np.transpose(values, axes)
 
-    def expand(self, values: np.ndarray, axes: Union[int, Iterable[int]]) -> np.ndarray:
-        return np.expand_dims(values, axes)
+    def expand(self, values: np.ndarray, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> np.ndarray:
+        axes = tuple(axes)
+        values = np.expand_dims(values, axes)
+        if sizes is not None:
+            sizes = tuple(sizes)
+            for axis, size in zip(axes, sizes, strict=True):
+                values = np.repeat(values, size, axis)
+        return values
 
     def slice(self, values: np.ndarray, *, slices: Union[int, slice, tuple[Union[int, slice]]]) -> np.ndarray:
         return values[slices]
