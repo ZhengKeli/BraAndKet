@@ -266,3 +266,56 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def as_operator_tensor(self):
         from .special import OperatorTensor
         return OperatorTensor.of(self)
+
+    # flatten
+
+    def flatten(self,
+            *spaces: KetSpace,
+            ket_spaces: Optional[Iterable[KetSpace]] = None,
+            bra_spaces: Optional[Iterable[BraSpace]] = None,
+            num_spaces: Optional[Iterable[NumSpace]] = None,
+    ) -> tuple[ValuesType, tuple[Union[NumSpace, tuple[KetSpace, ...], tuple[BraSpace, ...]], ...]]:
+        if len(spaces) > 0:
+            if ket_spaces is not None:
+                raise ValueError("Unexpected argument \"ket_spaces\"!")
+            ket_spaces = tuple(spaces)
+            if bra_spaces is not None:
+                raise ValueError("Unexpected argument \"bra_spaces\"!")
+            num_spaces = tuple(num_spaces) if num_spaces is not None else ()
+            return self.flatten(ket_spaces=ket_spaces, num_spaces=num_spaces)
+
+        ket_spaces = list(ket_spaces) if ket_spaces is not None else []
+        for space in self._spaces:
+            if isinstance(space, KetSpace) and space not in ket_spaces:
+                ket_spaces.append(space)
+
+        bra_spaces = list(bra_spaces) if bra_spaces is not None else [space.ct for space in ket_spaces]
+        for space in self._spaces:
+            if isinstance(space, BraSpace) and space not in bra_spaces:
+                bra_spaces.append(space)
+
+        num_spaces = list(num_spaces) if num_spaces is not None else []
+        for space in self._spaces:
+            if isinstance(space, NumSpace) and space not in num_spaces:
+                num_spaces.append(space)
+
+        shape = *num_spaces, prod(*(space.n for space in ket_spaces)), prod(*(space.n for space in bra_spaces))
+        values = self.backend.reshape(self.values(*num_spaces, *ket_spaces, *bra_spaces), shape)
+        return values, (*num_spaces, tuple(ket_spaces), tuple(bra_spaces))
+
+    def flattened_values(self,
+            *spaces: KetSpace,
+            ket_spaces: Optional[Iterable[KetSpace]] = None,
+            bra_spaces: Optional[Iterable[BraSpace]] = None,
+            num_spaces: Optional[Iterable[NumSpace]] = None,
+    ) -> ValuesType:
+        return self.flatten(*spaces, ket_spaces=ket_spaces, bra_spaces=bra_spaces, num_spaces=num_spaces)[0]
+
+
+# utils
+
+def prod(*values: int) -> int:
+    prod_value = 1
+    for value in values:
+        prod_value *= value
+    return prod_value

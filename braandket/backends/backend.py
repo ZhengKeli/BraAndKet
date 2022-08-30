@@ -88,7 +88,11 @@ class Backend(Generic[ValuesType], abc.ABC):
     def abs(self, values: ValuesType) -> ValuesType:
         pass
 
-    # dim operations
+    # tensor operations
+
+    @abc.abstractmethod
+    def reshape(self, values: ValuesType, shape: Iterable[int]) -> ValuesType:
+        pass
 
     @abc.abstractmethod
     def transpose(self, values: ValuesType, *, axes: Iterable[int]) -> ValuesType:

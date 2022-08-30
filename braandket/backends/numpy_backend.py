@@ -73,6 +73,9 @@ class NumpyBackend(Backend[np.ndarray]):
 
     # tensor operations
 
+    def reshape(self, values: np.ndarray, shape: Iterable[int]) -> np.ndarray:
+        return np.reshape(values, shape)
+
     def transpose(self, values: np.ndarray, *, axes: Iterable[int]) -> np.ndarray:
         return np.transpose(values, axes)
 
