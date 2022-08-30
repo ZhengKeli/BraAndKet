@@ -148,6 +148,14 @@ class OperatorTensor(QTensor[ValuesType]):
     def ket_spaces(self) -> frozenset[KetSpace]:
         return self._ket_spaces
 
+    # linear operations
+
+    def __add__(self, other) -> 'OperatorTensor':
+        return OperatorTensor.of(super().__add__(other))
+
+    def __mul__(self, other) -> 'OperatorTensor':
+        return OperatorTensor.of(super().__mul__(other))
+
     @classmethod
     def _expand_tensors_for_add(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
         assert isinstance(tensor0, OperatorTensor)
@@ -159,6 +167,18 @@ class OperatorTensor(QTensor[ValuesType]):
         tensor0 = _expand_with_identities(tensor0, *tensor1_ket_spaces)
         tensor1 = _expand_with_identities(tensor1, *tensor0_ket_spaces)
         return super()._expand_tensors_for_add(tensor0, tensor1)
+
+    # spaces operations
+
+    @property
+    def ct(self) -> 'OperatorTensor':
+        return OperatorTensor.of(super().ct)
+
+    def __matmul__(self, other) -> 'QTensor':
+        tensor = super().__matmul__(other)
+        if isinstance(other, OperatorTensor):
+            tensor = OperatorTensor.of(tensor)
+        return tensor
 
 
 # utils

@@ -95,6 +95,8 @@ class QTensor(Generic[ValuesType], abc.ABC):
         raise TypeError("QTensor is not allowed to be iterated.")
 
     def __eq__(self, other):
+        if self.is_scalar:
+            return self.scalar() == other
         raise TypeError("The function __eq__() of QTensor not allowed, because it is ambiguous.")
 
     def __copy__(self) -> 'QTensor':
@@ -135,6 +137,10 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def __add__(self, other) -> 'QTensor':
         if not isinstance(other, QTensor):
             other = self.spawn(other, ())
+        if self.is_scalar and self.scalar() == 0:
+            return other
+        if other.is_scalar and other.scalar() == 0:
+            return self
 
         self_expanded, other_expanded = self._expand_tensors_for_add(self, other)
 
@@ -162,6 +168,10 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def __mul__(self, other) -> 'QTensor':
         if not isinstance(other, QTensor):
             other = self.spawn(other, ())
+        if self.is_scalar and self.scalar() == 1:
+            return other
+        if other.is_scalar and other.scalar() == 1:
+            return self
 
         self_expanded, other_expanded = self._expand_tensors_for_mul(self, other)
 
@@ -244,7 +254,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
     # spaces operations
 
     @property
-    def ct(self):
+    def ct(self) -> 'QTensor':
         new_spaces = tuple((space.ct if isinstance(space, HSpace) else space) for space in self._spaces)
         new_values = self.backend.conj(self._values)
         return self.spawn(new_values, new_spaces)
