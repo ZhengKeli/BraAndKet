@@ -66,18 +66,8 @@ class PureStateTensor(QTensor[ValuesType]):
     # special operations
 
     def normalize(self) -> 'PureStateTensor':
-        num_spaces = tuple(space for space in self.spaces if isinstance(space, NumSpace))
-        ket_spaces = tuple(space for space in self.spaces if isinstance(space, KetSpace))
-        values = self.values(*num_spaces, *ket_spaces)
-
-        prob = self.ct @ self
-        prob_values = self.backend.expand(
-            prob.values(*num_spaces),
-            axes=range(len(num_spaces), len(num_spaces) + len(ket_spaces)))
-
-        new_values = self.backend.div(values, self.backend.sqrt(prob_values))
-        new_spaces = [*num_spaces, *ket_spaces]
-        return self.of(new_values, new_spaces)
+        from .operations import sqrt
+        return self / sqrt(self.ct @ self)
 
     def amplitudes(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
         # return self.values(*spaces)
