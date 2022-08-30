@@ -32,6 +32,6 @@ class NumSpace(Space):
     def full(self, value: Any, *, backend: Optional[Backend] = None):
         return self.ones(backend=backend) * value
 
-    def values(self, *, values: Any, backend: Optional[Backend] = None):
+    def values(self, values: Any, *, backend: Optional[Backend] = None):
         from braandket.tensor import NumericTensor
         return NumericTensor.of(values, [self], backend=backend)
