@@ -24,7 +24,8 @@ setuptools.setup(
     author_email="zhengkeli2009@126.com",
 
     # content
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages("src"),
+    package_dir={"": "src"},
 
     # dependency
     python_requires='>=3.6',
