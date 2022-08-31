@@ -1,3 +1,4 @@
+import math
 from typing import Callable, Iterable, Optional
 
 from braandket.backends import Backend, ValuesType, get_default_backend
@@ -14,6 +15,9 @@ def zero(*, backend: Optional[Backend] = None):
 
 def one(*, backend: Optional[Backend] = None):
     return QTensor.of(1, (), backend=backend)
+
+
+pi = math.pi
 
 
 # constructors
