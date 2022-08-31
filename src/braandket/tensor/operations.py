@@ -85,8 +85,7 @@ def sum_ct(*items, backend: Optional[Backend] = None) -> QTensor:
 
 def _broadcast(tensor: QTensor, *spaces: Space) -> QTensor:
     # extract non-existed spaces
-    existed_spaces_set = tensor.spaces
-    spaces = tuple(space for space in spaces if space not in existed_spaces_set)
+    spaces = tuple(space for space in spaces if space not in tensor.spaces)
 
     # shortcut if there is no non-existed spaces
     if len(spaces) == 0:
@@ -101,8 +100,8 @@ def _broadcast(tensor: QTensor, *spaces: Space) -> QTensor:
 def _broadcast_num_spaces(tensor0: QTensor, tensor1: QTensor, *tensors: QTensor) -> tuple[QTensor, ...]:
     if len(tensors) == 0:
         # extract num_spaces
-        tensor0_num_spaces = set(space for space in tensor0.spaces if isinstance(space, NumSpace))
-        tensor1_num_spaces = set(space for space in tensor1.spaces if isinstance(space, NumSpace))
+        tensor0_num_spaces = tuple(space for space in tensor0.spaces if isinstance(space, NumSpace))
+        tensor1_num_spaces = tuple(space for space in tensor1.spaces if isinstance(space, NumSpace))
 
         # broadcast num_spaces
         tensor0 = _broadcast(tensor0, *tensor1_num_spaces)
@@ -119,8 +118,8 @@ def _broadcast_num_spaces(tensor0: QTensor, tensor1: QTensor, *tensors: QTensor)
 
 def _broadcast_h_spaces(tensor0: QTensor, tensor1: QTensor) -> tuple[QTensor, QTensor]:
     # extract h_spaces
-    tensor0_h_spaces = set(space for space in tensor0.spaces if isinstance(space, HSpace))
-    tensor1_h_spaces = set(space for space in tensor1.spaces if isinstance(space, HSpace))
+    tensor0_h_spaces = tuple(space for space in tensor0.spaces if isinstance(space, HSpace))
+    tensor1_h_spaces = tuple(space for space in tensor1.spaces if isinstance(space, HSpace))
 
     # broadcast h_spaces
     if tensor0_h_spaces != tensor1_h_spaces:

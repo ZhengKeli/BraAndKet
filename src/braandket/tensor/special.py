@@ -28,7 +28,7 @@ class NumericTensor(QTensor[ValuesType]):
         super().__init__(values, spaces, backend)
 
     @property
-    def spaces(self) -> frozenset[NumSpace, ...]:
+    def spaces(self) -> tuple[NumSpace, ...]:
         # noinspection PyTypeChecker
         return super().spaces
 
@@ -59,7 +59,7 @@ class PureStateTensor(QTensor[ValuesType]):
         super().__init__(values, spaces, backend)
 
     @property
-    def spaces(self) -> frozenset[KetSpace, ...]:
+    def spaces(self) -> tuple[KetSpace, ...]:
         # noinspection PyTypeChecker
         return super().spaces
 
@@ -100,7 +100,7 @@ class MixedStateTensor(QTensor[ValuesType]):
         self._ket_spaces = ket_spaces
 
     @property
-    def ket_spaces(self) -> frozenset[KetSpace]:
+    def ket_spaces(self) -> tuple[KetSpace, ...]:
         return self._ket_spaces
 
     def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'MixedStateTensor':
@@ -135,7 +135,7 @@ class OperatorTensor(QTensor[ValuesType]):
         self._ket_spaces = ket_spaces
 
     @property
-    def ket_spaces(self) -> frozenset[KetSpace]:
+    def ket_spaces(self) -> tuple[KetSpace, ...]:
         return self._ket_spaces
 
     # linear operations
@@ -184,7 +184,7 @@ def _index_spaces_pairs(spaces: Iterable[Space]) -> tuple[tuple[int, ...], tuple
     return tuple(ket_axes), tuple(bra_axes)
 
 
-def _match_spaces_pairs(spaces: Iterable[Space]) -> frozenset[KetSpace, ...]:
+def _match_spaces_pairs(spaces: Iterable[Space]) -> tuple[KetSpace, ...]:
     spaces = tuple(spaces)
     ket_axes, bra_axes = _index_spaces_pairs(spaces)
-    return frozenset(spaces[axis] for axis in ket_axes)
+    return tuple(spaces[axis] for axis in ket_axes)

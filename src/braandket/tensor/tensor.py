@@ -52,8 +52,8 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return self.values_and_spaces(*spaces)[0]
 
     @property
-    def spaces(self) -> frozenset[Space, ...]:
-        return frozenset(self._spaces)
+    def spaces(self) -> tuple[Space, ...]:
+        return self._spaces
 
     def values_and_spaces(self, *spaces: Space) -> tuple[ValuesType, tuple[Space, ...]]:
         spaces = list(spaces)
