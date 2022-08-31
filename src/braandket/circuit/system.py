@@ -20,6 +20,8 @@ class QState:
         self._tensor = tensor
 
     def __matmul__(self, other: 'QState') -> 'QState':
+        if other is self:
+            return self
         new_tensor = self._tensor @ other._tensor
         new_systems = (*self._systems, *other._systems)
         new_state = QState(new_tensor, new_systems)
