@@ -8,6 +8,14 @@ ValuesType = TypeVar('ValuesType')
 
 class Backend(Generic[ValuesType], abc.ABC):
 
+    def __enter__(self):
+        from .default import push_context_backend
+        push_context_backend(self)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        from .default import pop_context_backend
+        pop_context_backend()
+
     # basics
 
     @abc.abstractmethod
