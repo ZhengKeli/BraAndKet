@@ -303,13 +303,16 @@ class QTensor(Generic[ValuesType], abc.ABC):
         for space in self._spaces:
             if isinstance(space, BraSpace) and space not in bra_spaces:
                 bra_spaces.append(space)
+        bra_spaces = [space for space in bra_spaces if space in self._spaces]
 
         num_spaces = list(num_spaces) if num_spaces is not None else []
         for space in self._spaces:
             if isinstance(space, NumSpace) and space not in num_spaces:
                 num_spaces.append(space)
 
-        shape = *num_spaces, prod(*(space.n for space in ket_spaces)), prod(*(space.n for space in bra_spaces))
+        shape = *(space.n for space in num_spaces), \
+                prod(*(space.n for space in ket_spaces)), \
+                prod(*(space.n for space in bra_spaces))
         values = self.backend.reshape(self.values(*num_spaces, *ket_spaces, *bra_spaces), shape)
         return values, (*num_spaces, tuple(ket_spaces), tuple(bra_spaces))
 
