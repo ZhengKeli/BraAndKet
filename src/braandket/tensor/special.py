@@ -161,7 +161,7 @@ class OperatorTensor(QTensor[ValuesType]):
         return OperatorTensor.of(super().__mul__(other))
 
     @classmethod
-    def _expand_tensors_for_add(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
+    def _expand_tensors_for_addsub(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
         assert isinstance(tensor0, OperatorTensor)
         assert isinstance(tensor1, OperatorTensor)
         tensor0_ket_spaces = tensor0.ket_spaces
@@ -170,7 +170,7 @@ class OperatorTensor(QTensor[ValuesType]):
         from .operations import _expand_with_identities
         tensor0 = _expand_with_identities(tensor0, *tensor1_ket_spaces)
         tensor1 = _expand_with_identities(tensor1, *tensor0_ket_spaces)
-        return super()._expand_tensors_for_add(tensor0, tensor1)
+        return super()._expand_tensors_for_addsub(tensor0, tensor1)
 
     # spaces operations
 

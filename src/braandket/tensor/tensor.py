@@ -144,19 +144,13 @@ class QTensor(Generic[ValuesType], abc.ABC):
         if other.is_scalar and other.scalar() == 0:
             return self
 
-        self_expanded, other_expanded = self._expand_tensors_for_add(self, other)
+        self_expanded, other_expanded = self._expand_tensors_for_addsub(self, other)
 
         new_spaces = tuple(self_expanded._spaces)
         self_values = self_expanded._values
         other_values = other_expanded.values(*new_spaces)
         new_values = self_expanded.backend.add(self_values, other_values)
         return self_expanded.spawn(new_values, new_spaces)
-
-    @classmethod
-    def _expand_tensors_for_add(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
-        from .operations import _broadcast_num_spaces
-        # noinspection PyTypeChecker
-        return _broadcast_num_spaces(tensor0, tensor1)
 
     def __radd__(self, other) -> 'QTensor':
         return self + other
@@ -167,6 +161,12 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def __rsub__(self, other) -> 'QTensor':
         return -self + other
 
+    @classmethod
+    def _expand_tensors_for_addsub(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
+        from .operations import _broadcast_num_spaces
+        tensor0, tensor1 = _broadcast_num_spaces(tensor0, tensor1)
+        return tensor0, tensor1
+
     def __mul__(self, other) -> 'QTensor':
         if not isinstance(other, QTensor):
             other = self.spawn(other, ())
@@ -175,23 +175,13 @@ class QTensor(Generic[ValuesType], abc.ABC):
         if other.is_scalar and other.scalar() == 1:
             return self
 
-        self_expanded, other_expanded = self._expand_tensors_for_mul(self, other)
+        self_expanded, other_expanded = self._expand_tensors_for_muldiv(self, other)
 
         new_spaces = self_expanded._spaces
         self_values = self_expanded._values
         other_values = other_expanded.values(*new_spaces)
         new_values = self_expanded.backend.mul(self_values, other_values)
         return self_expanded.spawn(new_values, new_spaces)
-
-    @classmethod
-    def _expand_tensors_for_mul(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
-        from .operations import _broadcast_h_spaces, _broadcast_num_spaces
-        try:
-            tensor0, tensor1 = _broadcast_h_spaces(tensor0, tensor1)
-        except ValueError:
-            raise ValueError("Spaces do not match! If you are performing matmul, use \"@\" instead.")
-        tensor0, tensor1 = _broadcast_num_spaces(tensor0, tensor1)
-        return tensor0, tensor1
 
     def __rmul__(self, other) -> 'QTensor':
         return self * other
@@ -204,7 +194,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
         if other.is_scalar and other.scalar() == 1:
             return self
 
-        self_expanded, other_expanded = self._expand_tensors_for_div(self, other)
+        self_expanded, other_expanded = self._expand_tensors_for_muldiv(self, other)
 
         new_spaces = self_expanded._spaces
         self_values = self_expanded._values
@@ -212,16 +202,16 @@ class QTensor(Generic[ValuesType], abc.ABC):
         new_values = self_expanded.backend.div(self_values, other_values)
         return self_expanded.spawn(new_values, new_spaces)
 
+    def __rtruediv__(self, other) -> 'QTensor':
+        other = self.spawn(other, ())
+        return other / self
+
     @classmethod
-    def _expand_tensors_for_div(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
+    def _expand_tensors_for_muldiv(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
         from .operations import _broadcast_h_spaces, _broadcast_num_spaces
         tensor0, tensor1 = _broadcast_h_spaces(tensor0, tensor1)
         tensor0, tensor1 = _broadcast_num_spaces(tensor0, tensor1)
         return tensor0, tensor1
-
-    def __rtruediv__(self, other) -> 'QTensor':
-        other = self.spawn(other, ())
-        return other / self
 
     # tensor operations
 
@@ -263,14 +253,14 @@ class QTensor(Generic[ValuesType], abc.ABC):
             *(other_spaces[axis] for axis in other_rem_axes)]
         return self_expanded.spawn(new_values, new_spaces)
 
+    def __rmatmul__(self, other) -> 'QTensor':
+        return self @ other  # (other is scalar)
+
     @classmethod
     def _expand_tensors_for_matmul(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
         from .operations import _broadcast_num_spaces
         # noinspection PyTypeChecker
         return _broadcast_num_spaces(tensor0, tensor1)
-
-    def __rmatmul__(self, other) -> 'QTensor':
-        return self @ other  # (other is scalar)
 
     # spaces operations
 
