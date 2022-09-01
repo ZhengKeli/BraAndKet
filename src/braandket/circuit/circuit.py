@@ -4,14 +4,18 @@ import numpy as np
 
 from braandket.space import KetSpace
 from braandket.tensor import NumericTensor, OperatorTensor, QTensor, cos, exp, sin, sqrt
-from .operation import MeasurementOperation, UnitaryOperation
+from .operation import DesiredMeasurementOperation, MeasurementOperation, UnitaryOperation
 from .system import QParticle
 
+
+# systems
 
 class Qubit(QParticle):
     def __init__(self, name: Optional[str] = None):
         super().__init__(2, name)
 
+
+# measurements
 
 class _M(MeasurementOperation):
     # noinspection PyMethodOverriding
@@ -19,6 +23,13 @@ class _M(MeasurementOperation):
         # noinspection PyTypeChecker
         return space.projector(0), space.projector(1)
 
+
+class D(DesiredMeasurementOperation):
+    def __init__(self, decision: int):
+        super().__init__(M, decision)
+
+
+# unitary operations
 
 class _X(UnitaryOperation):
     # noinspection PyMethodOverriding

@@ -2,7 +2,7 @@ import abc
 from typing import Optional, Union
 
 from braandket.space import KetSpace
-from braandket.tensor import NumericTensor, OperatorTensor, abs, choose, take
+from braandket.tensor import NumericTensor, OperatorTensor, choose, take
 from .system import QSystem
 
 
@@ -96,7 +96,7 @@ class UnitaryOperation(QOperation, abc.ABC):
 
 class MeasurementOperation(QOperation, abc.ABC):
     @abc.abstractmethod
-    def operators(self, *spaces: KetSpace) -> tuple[OperatorTensor, ...]:
+    def operators(self, *spaces: Union[KetSpace, tuple]) -> tuple[OperatorTensor, ...]:
         pass
 
     def apply(self, *systems: QSystem, name: Optional[str] = None) -> SingleMeasurementResult:
@@ -109,9 +109,37 @@ class MeasurementOperation(QOperation, abc.ABC):
         probs = []
         for measure_operator in measure_operators:
             measured_state = measure_operator @ state.tensor
-            prob = abs((measured_state.ct @ measured_state)).as_numeric_tensor()
+            prob = measured_state.norm()
             probs.append(prob)
 
         measure_result = choose(probs)
+        measured_state = take(measure_operators, measure_result) @ state.tensor
         measure_prob = take(probs, measure_result).as_numeric_tensor()
+
+        state.tensor = measured_state.normalize()
         return SingleMeasurementResult(self, measure_result, measure_prob, name=name)
+
+
+class DesiredMeasurementOperation(MeasurementOperation):
+    def __init__(self, measurement: MeasurementOperation, decision: int):
+        self._measurement = measurement
+        self._decision = decision
+
+    def operators(self, *spaces: Union[KetSpace, tuple]) -> tuple[OperatorTensor, ...]:
+        return self._measurement.operators(*spaces)
+
+    def operator(self, *spaces: Union[KetSpace, tuple]) -> OperatorTensor:
+        return self.operators(*spaces)[self._decision]
+
+    def apply(self, *systems: QSystem, name: Optional[str] = None) -> SingleMeasurementResult:
+        spaces = tuple(system.spaces for system in systems)
+        state = QSystem.prod(*systems).state
+
+        with state.tensor.backend:
+            measure_operator = self.operator(*spaces)
+
+        measured_state = measure_operator @ state.tensor
+        measure_prob = measured_state.norm()
+
+        state.tensor = measured_state.normalize()
+        return SingleMeasurementResult(self, self._decision, measure_prob, name=name)
