@@ -9,7 +9,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     # basics
 
-    def convert(self, values: Any, *, dtype=tf.complex64) -> tf.Tensor:
+    def convert(self, values: Any, *, dtype=None) -> tf.Tensor:
         values = tf.convert_to_tensor(values)
         if dtype is not None:
             values = tf.cast(values, dtype=dtype)
@@ -17,6 +17,15 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     def copy(self, values: tf.Tensor) -> tf.Tensor:
         return values
+
+    def _auto_cast(self, values0: tf.Tensor, values1: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
+        ordered_dtypes = [tf.complex128, tf.complex64, tf.float32, tf.float64, tf.int64, tf.int32]
+        dt0 = ordered_dtypes.index(values0.dtype)
+        dt1 = ordered_dtypes.index(values1.dtype)
+        dtype = ordered_dtypes[dt0] if dt0 < dt1 else ordered_dtypes[dt1]
+        values0 = tf.cast(values0, dtype=dtype)
+        values1 = tf.cast(values1, dtype=dtype)
+        return values0, values1
 
     # constructors
 
@@ -63,15 +72,19 @@ class TensorflowBackend(Backend[tf.Tensor]):
     # linear operations
 
     def add(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
+        values0, values1 = self._auto_cast(values0, values1)
         return values0 + values1
 
     def sub(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
+        values0, values1 = self._auto_cast(values0, values1)
         return values0 - values1
 
     def mul(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
+        values0, values1 = self._auto_cast(values0, values1)
         return values0 * values1
 
     def div(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
+        values0, values1 = self._auto_cast(values0, values1)
         return values0 / values1
 
     # operator operations
@@ -153,7 +166,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [*bat_axes, *rem_axes0, *exp_axes0, *dot_axes]
         # [*bat_axes, *exp_axes1, *rem_axes1, *dot_axes]
 
-        values = values0 * values1
+        values = self.mul(values0, values1)
         # [*bat_axes, *rem_axes0, *rem_axes1, *dot_axes]
 
         values = tf.reduce_sum(values, tuple((i + bat_axes_n + rem_axes0_n + rem_axes1_n) for i in range(dot_axes_n)))
@@ -166,6 +179,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
     def take(self, values: Iterable[tf.Tensor], indices: tf.Tensor) -> tf.Tensor:
         values = tf.stack(values, axis=-1)
         indices = tf.expand_dims(indices, axis=-1)
+        indices = tf.cast(indices, tf.int32)
         values = tf.experimental.numpy.take_along_axis(values, indices, axis=-1)
         values = tf.squeeze(values, axis=-1)
         return values
