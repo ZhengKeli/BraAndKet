@@ -71,9 +71,13 @@ class PureStateTensor(QTensor[ValuesType]):
 
     # special operations
 
+    def norm(self) -> 'NumericTensor':
+        from .operations import abs
+        return abs(NumericTensor.of(self.ct @ self))
+
     def normalize(self) -> 'PureStateTensor':
         from .operations import sqrt
-        return self / sqrt(self.ct @ self)
+        return self / sqrt(self.norm())
 
     def amplitudes(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
         # return self.values(*spaces)
