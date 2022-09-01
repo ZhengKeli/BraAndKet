@@ -36,6 +36,8 @@ class QTensor(Generic[ValuesType], abc.ABC):
 
         if len(self._spaces) != len(set(self._spaces)):
             raise ValueError("Found duplicated spaces!")
+        if tuple(space.n for space in self._spaces) != self.backend.shape(self._values):
+            raise ValueError("Shape of values does not match the spaces!")
 
     @property
     def backend(self) -> Backend[ValuesType]:

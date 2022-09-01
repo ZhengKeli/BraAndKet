@@ -99,6 +99,10 @@ class Backend(Generic[ValuesType], abc.ABC):
     # tensor operations
 
     @abc.abstractmethod
+    def shape(self, values: ValuesType) -> tuple[int, ...]:
+        pass
+
+    @abc.abstractmethod
     def reshape(self, values: ValuesType, shape: Iterable[int]) -> ValuesType:
         pass
 
