@@ -1,10 +1,12 @@
 import abc
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Union
 from weakref import WeakSet
 
 from braandket.space import KetSpace
 from braandket.tensor import PureStateTensor
 
+
+# state
 
 class QState:
     def __init__(self, tensor: PureStateTensor, systems: Iterable['QSystem']):
@@ -35,10 +37,11 @@ class QState:
             if len(states) > 0 else state0
 
 
+# system
+
 class QSystem(abc.ABC):
-    def __init__(self, state: QState, spaces: Iterable[KetSpace]):
+    def __init__(self, state: QState):
         self._state = state
-        self._spaces = frozenset(spaces)
 
         # noinspection PyProtectedMember
         self._state._systems.add(self)
@@ -48,8 +51,9 @@ class QSystem(abc.ABC):
         return self._state
 
     @property
-    def spaces(self) -> frozenset[KetSpace]:
-        return self._spaces
+    @abc.abstractmethod
+    def spaces(self) -> Union[KetSpace, tuple]:
+        pass
 
     def __matmul__(self, other: 'QSystem'):
         return QCompose(self, other)
@@ -61,19 +65,24 @@ class QSystem(abc.ABC):
 
 
 class QCompose(QSystem):
-    def __init__(self, *systems: QSystem):
-        super().__init__(
-            state=QState.prod(*(system.state for system in systems)),
-            spaces=(space for system in systems for space in system.spaces))
+    def __init__(self, *children: QSystem):
+        super().__init__(QState.prod(*(system.state for system in children)))
+        self._children = tuple(children)
+
+    @property
+    def children(self) -> tuple[QSystem]:
+        return self._children
+
+    @property
+    def spaces(self) -> Union[KetSpace, tuple]:
+        return tuple(child.spaces for child in self._children)
 
 
 class QParticle(QSystem, KetSpace):
     def __init__(self, n: int, name: Optional[str] = None):
         KetSpace.__init__(self, n, name)
-        state = QState(self.eigenstate(0), ())
-        QSystem.__init__(self, state, (self,))
+        QSystem.__init__(self, QState(self.eigenstate(0), ()))
 
-
-class Qubit(QParticle):
-    def __init__(self, name: Optional[str] = None):
-        super().__init__(2, name)
+    @property
+    def spaces(self) -> Union[KetSpace, tuple]:
+        return self

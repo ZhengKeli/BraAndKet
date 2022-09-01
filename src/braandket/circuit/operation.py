@@ -1,48 +1,110 @@
 import abc
-from typing import Iterable
+from typing import Optional, Union
 
-from braandket.backends import Backend
 from braandket.space import KetSpace
-from braandket.tensor import OperatorTensor, abs, choose, take
-from .system import QState, QSystem
+from braandket.tensor import NumericTensor, OperatorTensor, abs, choose, take
+from .system import QSystem
 
+
+# measurement result
+
+class MeasurementResult(abc.ABC):
+    def __init__(self, operation: 'MeasurementOperation', *, name: Optional[str] = None):
+        self._operation = operation
+        self._name = name
+
+    @property
+    def operation(self) -> 'QOperation':
+        return self._operation
+
+    @property
+    def name(self) -> Optional[str]:
+        return self._name
+
+
+class SingleMeasurementResult(MeasurementResult):
+    def __init__(self,
+            operation: 'MeasurementOperation',
+            result: Union[int, NumericTensor],
+            probability: Union[float, NumericTensor], *,
+            name: Optional[str] = None
+    ):
+        super().__init__(operation, name=name)
+        self._result = result
+        self._probability = probability
+
+    @property
+    def operation(self) -> 'MeasurementOperation':
+        return self._operation
+
+    @property
+    def result(self) -> NumericTensor:
+        return self._result
+
+    @property
+    def probability(self) -> NumericTensor:
+        return self._probability
+
+    def __repr__(self) -> str:
+        items = [f"result={self.result}", f"probability={self.probability}"]
+        if self.name is not None:
+            items.append(f"name={self.name}")
+        return f"<{type(self).__name__} " + ", ".join(items) + ">"
+
+
+class ComposedMeasurementResult(MeasurementResult):
+    def __init__(self,
+            operation: 'MeasurementOperation',
+            *children: MeasurementResult,
+            name: Optional[str] = None
+    ):
+        super().__init__(operation, name=name)
+        self._children = children
+
+    @property
+    def children(self) -> tuple[MeasurementResult, ...]:
+        return self._children
+
+
+# operation
 
 class QOperation(abc.ABC):
-    def __call__(self, *systems: QSystem) -> tuple[QSystem]:
-        return self.apply(*systems)
-
-    def apply(self, *systems: QSystem) -> tuple[QSystem]:
-        self.apply_with_measurement(*systems)
+    def __call__(self, *systems: QSystem, name: Optional[str] = None) -> tuple[QSystem, ...]:
+        self.apply(*systems, name=name)
         return systems
 
-    def apply_with_measurement(self, *systems: QSystem):
-        system = systems[0] if len(systems) == 1 else QSystem.prod(*systems)
-        results = self._apply(system.state, *system.spaces)
-        return results
-
     @abc.abstractmethod
-    def _apply(self, state: QState, *spaces: Iterable[KetSpace]):
+    def apply(self, *systems: QSystem, name: Optional[str] = None) -> Optional[MeasurementResult]:
         pass
 
 
 class UnitaryOperation(QOperation, abc.ABC):
     @abc.abstractmethod
-    def _unitary_operator(self, *spaces: KetSpace, backend: Backend) -> OperatorTensor:
+    def operator(self, *spaces: Union[KetSpace, tuple]) -> OperatorTensor:
         pass
 
-    def _apply(self, state: QState, *spaces: Iterable[KetSpace]):
-        op_tensor = self._unitary_operator(*spaces, backend=state.tensor.backend)
-        state.tensor = op_tensor @ state.tensor
+    def apply(self, *systems: QSystem, name: Optional[str] = None) -> Optional[MeasurementResult]:
+        spaces = tuple(system.spaces for system in systems)
+        state = QSystem.prod(*systems).state
+
+        with state.tensor.backend:
+            operator = self.operator(*spaces)
+
+        state.tensor = operator @ state.tensor
+        return None
 
 
 class MeasurementOperation(QOperation, abc.ABC):
     @abc.abstractmethod
-    def _measure_operators(self, *spaces: KetSpace, backend: Backend) -> tuple[OperatorTensor, ...]:
+    def operators(self, *spaces: KetSpace) -> tuple[OperatorTensor, ...]:
         pass
 
-    def _apply(self, state: QState, *spaces: Iterable[KetSpace]):
-        backend = state.tensor.backend
-        measure_operators = self._measure_operators(*spaces, backend=backend)
+    def apply(self, *systems: QSystem, name: Optional[str] = None) -> SingleMeasurementResult:
+        spaces = tuple(system.spaces for system in systems)
+        state = QSystem.prod(*systems).state
+
+        with state.tensor.backend:
+            measure_operators = self.operators(*spaces)
 
         probs = []
         for measure_operator in measure_operators:
@@ -51,5 +113,5 @@ class MeasurementOperation(QOperation, abc.ABC):
             probs.append(prob)
 
         measure_result = choose(probs)
-        measure_prob = take(probs, measure_result)
-        return measure_result, measure_prob
+        measure_prob = take(probs, measure_result).as_numeric_tensor()
+        return SingleMeasurementResult(self, measure_result, measure_prob, name=name)
