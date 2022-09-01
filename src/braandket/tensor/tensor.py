@@ -197,12 +197,31 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return self * other
 
     def __truediv__(self, other) -> 'QTensor':
-        return self * (1.0 / other)
+        if not isinstance(other, QTensor):
+            other = self.spawn(other, ())
+        if self.is_scalar and self.scalar() == 1:
+            return other
+        if other.is_scalar and other.scalar() == 1:
+            return self
+
+        self_expanded, other_expanded = self._expand_tensors_for_div(self, other)
+
+        new_spaces = self_expanded._spaces
+        self_values = self_expanded._values
+        other_values = other_expanded.values(*new_spaces)
+        new_values = self_expanded.backend.div(self_values, other_values)
+        return self_expanded.spawn(new_values, new_spaces)
+
+    @classmethod
+    def _expand_tensors_for_div(cls, tensor0: 'QTensor', tensor1: 'QTensor') -> tuple['QTensor', 'QTensor']:
+        from .operations import _broadcast_h_spaces, _broadcast_num_spaces
+        tensor0, tensor1 = _broadcast_h_spaces(tensor0, tensor1)
+        tensor0, tensor1 = _broadcast_num_spaces(tensor0, tensor1)
+        return tensor0, tensor1
 
     def __rtruediv__(self, other) -> 'QTensor':
-        if self.is_scalar:
-            return other / self.scalar()
-        raise TypeError("Can not divide an QTensor (except a zero-dimensional one)")
+        other = self.spawn(other, ())
+        return other / self
 
     # tensor operations
 
