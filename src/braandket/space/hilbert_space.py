@@ -2,7 +2,7 @@ import abc
 import warnings
 from typing import Optional
 
-from braandket.backends import Backend
+from braandket.backend import Backend
 from .space import Space
 
 

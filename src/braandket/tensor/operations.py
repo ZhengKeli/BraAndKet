@@ -1,7 +1,7 @@
 import math
 from typing import Any, Callable, Iterable, Optional, Union
 
-from braandket.backends import Backend, ValuesType, get_default_backend
+from braandket.backend import Backend, ValuesType, get_default_backend
 from braandket.space import HSpace, KetSpace, NumSpace, Space
 from .special import NumericTensor, OperatorTensor, PureStateTensor
 from .tensor import QTensor

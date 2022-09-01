@@ -1,7 +1,7 @@
 import abc
 from typing import Any, Generic, Iterable, Optional, Union
 
-from braandket.backends import Backend, ValuesType, get_default_backend
+from braandket.backend import Backend, ValuesType, get_default_backend
 from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
 
 

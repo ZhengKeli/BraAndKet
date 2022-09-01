@@ -1,6 +1,6 @@
 from typing import Any, Iterable, Optional, Union
 
-from braandket.backends import Backend, ValuesType, get_default_backend
+from braandket.backend import Backend, ValuesType, get_default_backend
 from braandket.space import KetSpace, NumSpace, Space
 from .tensor import QTensor
 
