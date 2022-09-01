@@ -15,9 +15,13 @@ class NumericTensor(QTensor[ValuesType]):
             spaces: Optional[Iterable[Space]] = None, *,
             backend: Optional[Backend] = None
     ) -> 'NumericTensor':
+        if isinstance(values, NumericTensor):
+            return values
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
             return cls(values._values, values._spaces, values._backend)
+        if spaces is None:
+            spaces = ()
         return cls(values, spaces, backend or get_default_backend())
 
     def __init__(self, values: Any, spaces: Iterable[Space], backend: Backend):
@@ -46,6 +50,8 @@ class PureStateTensor(QTensor[ValuesType]):
             spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None, *,
             backend: Optional[Backend] = None
     ) -> 'PureStateTensor':
+        if isinstance(values, PureStateTensor):
+            return values
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
             return cls(values._values, values._spaces, values._backend)
@@ -88,6 +94,8 @@ class MixedStateTensor(QTensor[ValuesType]):
             spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None, *,
             backend: Optional[Backend] = None
     ) -> 'MixedStateTensor':
+        if isinstance(values, MixedStateTensor):
+            return values
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
             return cls(values._values, values._spaces, values._backend)
@@ -123,6 +131,8 @@ class OperatorTensor(QTensor[ValuesType]):
             spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None, *,
             backend: Optional[Backend] = None
     ) -> 'OperatorTensor':
+        if isinstance(values, OperatorTensor):
+            return values
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
             return cls(values._values, values._spaces, values._backend)

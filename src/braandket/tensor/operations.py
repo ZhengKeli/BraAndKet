@@ -1,5 +1,5 @@
 import math
-from typing import Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional, Union
 
 from braandket.backends import Backend, ValuesType, get_default_backend
 from braandket.space import HSpace, KetSpace, NumSpace, Space
@@ -140,7 +140,8 @@ def _expand_with_identities(tensor: OperatorTensor, *spaces: KetSpace):
 # numeric
 
 def _construct_wrapped_unary_op(func: Callable[[ValuesType], ValuesType]):
-    def wrapped_op(value: NumericTensor) -> NumericTensor:
+    def wrapped_op(value: Union[NumericTensor, Any]) -> NumericTensor:
+        value = NumericTensor.of(value)
         op = getattr(value.backend, func.__name__)
         # noinspection PyProtectedMember
         return value.spawn(op(value._values), value._spaces)
@@ -159,9 +160,12 @@ abs = _construct_wrapped_unary_op(Backend.abs)
 
 # choose
 
-def choose(probs: Iterable[NumericTensor]) -> NumericTensor:
+def choose(probs: Iterable[Union[NumericTensor, Any]]) -> NumericTensor:
+    probs = tuple(NumericTensor.of(prob) for prob in probs)
+    if len(probs) == 0:
+        raise ValueError("Can not choose from empty set.")
+
     probs = _broadcast_num_spaces(*probs)
-    assert len(probs) > 0
     spaces = tuple(probs[0].spaces)
     backend = probs[0].backend
 
