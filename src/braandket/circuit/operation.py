@@ -69,9 +69,8 @@ class ComposedMeasurementResult(MeasurementResult):
 # operation
 
 class QOperation(abc.ABC):
-    def __call__(self, *systems: QSystem, name: Optional[str] = None) -> tuple[QSystem, ...]:
-        self.apply(*systems, name=name)
-        return systems
+    def __call__(self, *systems: QSystem, name: Optional[str] = None) -> Optional[MeasurementResult]:
+        return self.apply(*systems, name=name)
 
     @abc.abstractmethod
     def apply(self, *systems: QSystem, name: Optional[str] = None) -> Optional[MeasurementResult]:
@@ -118,6 +117,9 @@ class MeasurementOperation(QOperation, abc.ABC):
 
         state.tensor = measured_state.normalize()
         return SingleMeasurementResult(self, measure_result, measure_prob, name=name)
+
+    def __call__(self, *systems: QSystem, name: Optional[str] = None) -> SingleMeasurementResult:
+        return self.apply(*systems, name=name)
 
 
 class DesiredMeasurementOperation(MeasurementOperation):
