@@ -13,13 +13,21 @@ class TensorflowBackend(Backend[tf.Tensor]):
         values = tf.convert_to_tensor(values)
         if dtype is not None:
             values = tf.cast(values, dtype=dtype)
+        elif values.dtype in (tf.int8, tf.int16, tf.int32, tf.int64):
+            values = tf.cast(values, dtype=tf.int32)
+        elif values.dtype in (tf.float16, tf.float32, tf.float64):
+            values = tf.cast(values, dtype=tf.float32)
+        elif values.dtype in (tf.complex64, tf.complex128):
+            values = tf.cast(values, dtype=tf.complex64)
+        else:
+            raise TypeError(f"Unsupported dtype of values: {values.dtype}")
         return values
 
     def copy(self, values: tf.Tensor) -> tf.Tensor:
         return values
 
     def _auto_cast(self, values0: tf.Tensor, values1: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
-        ordered_dtypes = [tf.complex128, tf.complex64, tf.float32, tf.float64, tf.int64, tf.int32]
+        ordered_dtypes = [tf.complex64, tf.float32, tf.int32]
         dt0 = ordered_dtypes.index(values0.dtype)
         dt1 = ordered_dtypes.index(values1.dtype)
         dtype = ordered_dtypes[dt0] if dt0 < dt1 else ordered_dtypes[dt1]
