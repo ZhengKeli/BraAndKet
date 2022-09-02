@@ -240,6 +240,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
 
         new_values, (self_rem_axes, other_rem_axes) = self_expanded.backend.dot(
             self_values, other_values,
+            ndim0=len(self_spaces), ndim1=len(other_spaces),
             dot_axes=(self_dot_axes, other_dot_axes),
             bat_axes=(self_num_axes, other_num_axes))
         new_spaces = [

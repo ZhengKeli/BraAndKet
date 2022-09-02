@@ -132,6 +132,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     def dot(self,
             values0: tf.Tensor, values1: tf.Tensor, *,
+            ndim0: int, ndim1: int,
             dot_axes: tuple[Iterable[int], Iterable[int]],
             bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[tf.Tensor, tuple[tuple[int, ...], tuple[int, ...]]]:
@@ -148,12 +149,12 @@ class TensorflowBackend(Backend[tf.Tensor]):
         selected_axes0 = {*bat_axes0, *dot_axes0}
         if len(selected_axes0) != len(bat_axes0) + len(dot_axes0):
             raise ValueError("Found duplication for axes of values0 !")
-        rem_axes0 = tuple(axis for axis in range(len(tf.shape(values0))) if axis not in selected_axes0)
+        rem_axes0 = tuple(axis for axis in range(ndim0) if axis not in selected_axes0)
 
         selected_axes1 = {*bat_axes1, *dot_axes1}
         if len(selected_axes1) != len(bat_axes1) + len(dot_axes1):
             raise ValueError("Found duplication for axes of values1 !")
-        rem_axes1 = tuple(axis for axis in range(len(tf.shape(values1))) if axis not in selected_axes1)
+        rem_axes1 = tuple(axis for axis in range(ndim1) if axis not in selected_axes1)
 
         values0 = tf.transpose(values0, [*bat_axes0, *rem_axes0, *dot_axes0])
         values1 = tf.transpose(values1, [*bat_axes1, *rem_axes1, *dot_axes1])
