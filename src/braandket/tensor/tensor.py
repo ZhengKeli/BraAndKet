@@ -30,14 +30,21 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return QTensor(values, spaces, backend)
 
     def __init__(self, values: Any, spaces: Iterable[Space], backend: Backend):
-        self._backend = backend
-        self._values = self.backend.convert(values)
-        self._spaces = tuple(spaces)
+        # check spaces
+        spaces = tuple(spaces)
+        for i in range(len(spaces)):
+            for j in range(i + 1, len(spaces)):
+                if spaces[i] == spaces[j]:
+                    raise ValueError(f"Found duplicated spaces when constructing QTensor: {spaces[i]}")
 
-        if len(self._spaces) != len(set(self._spaces)):
-            raise ValueError("Found duplicated spaces!")
-        if tuple(space.n for space in self._spaces) != self.backend.shape(self._values):
-            raise ValueError("Shape of values does not match the spaces!")
+        # check values
+        values = backend.convert(values)
+        values = backend.ensure_shape(values, tuple(space.n for space in spaces))
+
+        # construct
+        self._spaces = spaces
+        self._values = values
+        self._backend = backend
 
     @property
     def backend(self) -> Backend[ValuesType]:

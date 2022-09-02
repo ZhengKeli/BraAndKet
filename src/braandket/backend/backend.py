@@ -99,7 +99,7 @@ class Backend(Generic[ValuesType], abc.ABC):
     # tensor operations
 
     @abc.abstractmethod
-    def shape(self, values: ValuesType) -> tuple[int, ...]:
+    def ensure_shape(self, values: ValuesType, shape: Iterable[int]) -> ValuesType:
         pass
 
     @abc.abstractmethod

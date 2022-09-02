@@ -89,8 +89,8 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     # operator operations
 
-    def shape(self, values: tf.Tensor) -> tuple[int, ...]:
-        return tuple(int(i) for i in tf.shape(values))
+    def ensure_shape(self, values: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
+        return tf.ensure_shape(values, shape)
 
     def reshape(self, values: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
         return tf.reshape(values, shape)

@@ -73,8 +73,10 @@ class NumpyBackend(Backend[np.ndarray]):
 
     # tensor operations
 
-    def shape(self, values: ValuesType) -> tuple[int, ...]:
-        return np.shape(values)
+    def ensure_shape(self, values: np.ndarray, shape: Iterable[int]):
+        if np.shape(values) != tuple(shape):
+            raise ValueError(f"Unexpected values shape! expected={shape}, actual={np.shape(values)}")
+        return values
 
     def reshape(self, values: np.ndarray, shape: Iterable[int]) -> np.ndarray:
         return np.reshape(values, shape)
