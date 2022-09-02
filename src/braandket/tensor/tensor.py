@@ -146,10 +146,6 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def __add__(self, other) -> 'QTensor':
         if not isinstance(other, QTensor):
             other = self.spawn(other, ())
-        if self.is_scalar and self.scalar() == 0:
-            return other
-        if other.is_scalar and other.scalar() == 0:
-            return self
 
         self_expanded, other_expanded = self._expand_tensors_for_addsub(self, other)
 
@@ -177,10 +173,6 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def __mul__(self, other) -> 'QTensor':
         if not isinstance(other, QTensor):
             other = self.spawn(other, ())
-        if self.is_scalar and self.scalar() == 1:
-            return other
-        if other.is_scalar and other.scalar() == 1:
-            return self
 
         self_expanded, other_expanded = self._expand_tensors_for_muldiv(self, other)
 
@@ -196,10 +188,6 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def __truediv__(self, other) -> 'QTensor':
         if not isinstance(other, QTensor):
             other = self.spawn(other, ())
-        if self.is_scalar and self.scalar() == 1:
-            return other
-        if other.is_scalar and other.scalar() == 1:
-            return self
 
         self_expanded, other_expanded = self._expand_tensors_for_muldiv(self, other)
 
