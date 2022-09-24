@@ -54,7 +54,7 @@ class _H(UnitaryOperation):
     # noinspection PyMethodOverriding
     def operator(self, qubit: KetSpace) -> OperatorTensor:
         return (qubit.operator(0, 0) + qubit.operator(0, 1) +
-                qubit.operator(1, 0) + qubit.operator(1, 1)) / sqrt(2)
+                qubit.operator(1, 0) - qubit.operator(1, 1)) / sqrt(2.0)
 
 
 class _CX(UnitaryOperation):
@@ -75,7 +75,7 @@ class _CZ(UnitaryOperation):
     # noinspection PyMethodOverriding
     def operator(self, control: KetSpace, target: KetSpace) -> OperatorTensor:
         return control.projector(0) @ target.identity() + \
-               control.projector(1) @ target.identity() * (-1)
+               control.projector(1) @ Z.operator(target)
 
 
 M = _M()
