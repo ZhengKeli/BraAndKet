@@ -144,6 +144,7 @@ class NumpyBackend(Backend[np.ndarray]):
 
         values0 = np.transpose(values0, [*bat_axes0, *rem_axes0, *dot_axes0])
         values1 = np.transpose(values1, [*bat_axes1, *rem_axes1, *dot_axes1])
+        # [*bat_axes, *rem_axes, *dot_axes]
 
         bat_axes_n, dot_axes_n = len(bat_axes0), len(dot_axes0)
         rem_axes0_n, rem_axes1_n = len(rem_axes0), len(rem_axes1)
