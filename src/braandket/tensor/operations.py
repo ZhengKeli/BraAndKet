@@ -67,11 +67,11 @@ def prod(*items: QTensor, backend: Optional[Backend] = None) -> QTensor:
     return x
 
 
-def sum(*items, backend: Optional[Backend] = None) -> QTensor:
+def sum(*items: QTensor, backend: Optional[Backend] = None) -> QTensor:
     if len(items) == 0:
         return zero(backend=backend)
     x = items[0]
-    for item in items:
+    for item in items[1:]:
         x = x + item
     return x
 
