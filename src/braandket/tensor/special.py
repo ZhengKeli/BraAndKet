@@ -136,7 +136,7 @@ class OperatorTensor(QTensor[ValuesType]):
     @classmethod
     def of(cls,
             values: Union[QTensor, Any],
-            spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None, *,
+            spaces: Optional[Iterable[Space]] = None, *,
             backend: Optional[Backend] = None
     ) -> 'OperatorTensor':
         if isinstance(values, OperatorTensor):
@@ -145,6 +145,22 @@ class OperatorTensor(QTensor[ValuesType]):
             # noinspection PyTypeChecker
             return cls(values._values, values._spaces, values._backend)
         return cls(values, spaces, backend or get_default_backend())
+
+    @classmethod
+    def from_matrix(cls,
+            matrix: ValuesType,
+            ket_spaces: Iterable[KetSpace],
+            num_spaces: Iterable[KetSpace] = (), *,
+            backend: Optional[Backend] = None
+    ) -> 'OperatorTensor':
+        num_spaces = tuple(num_spaces)
+        ket_spaces = tuple(ket_spaces)
+        bra_spaces = tuple(space.ct for space in ket_spaces)
+        spaces = num_spaces + ket_spaces + bra_spaces
+        backend = backend or get_default_backend()
+        shape = tuple(space.n for space in spaces)
+        values = backend.reshape(matrix, shape)
+        return cls(values, spaces, backend)
 
     def __init__(self, values: Any, spaces: Iterable[Space], backend: Backend):
         spaces = tuple(spaces)
