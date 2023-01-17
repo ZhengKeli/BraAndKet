@@ -337,9 +337,9 @@ class QTensor(Generic[ValuesType], abc.ABC):
             if isinstance(space, NumSpace) and space not in num_spaces:
                 num_spaces.append(space)
 
-        shape = *(space.n for space in num_spaces), \
-                prod(*(space.n for space in ket_spaces)), \
-                prod(*(space.n for space in bra_spaces))
+        shape = (*(space.n for space in num_spaces),
+                 prod(*(space.n for space in ket_spaces)),
+                 prod(*(space.n for space in bra_spaces)))
         values = self.backend.reshape(self.values(*num_spaces, *ket_spaces, *bra_spaces), shape)
         return values, (*num_spaces, tuple(ket_spaces), tuple(bra_spaces))
 
