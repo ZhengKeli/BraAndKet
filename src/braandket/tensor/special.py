@@ -65,9 +65,13 @@ class PureStateTensor(QTensor[ValuesType]):
         super().__init__(values, spaces, backend)
 
     @property
-    def spaces(self) -> tuple[KetSpace, ...]:
+    def spaces(self) -> tuple[Union[NumSpace, KetSpace], ...]:
         # noinspection PyTypeChecker
         return super().spaces
+
+    @property
+    def ket_spaces(self) -> tuple[KetSpace, ...]:
+        return tuple(space for space in self.spaces if isinstance(space, KetSpace))
 
     # special operations
 
