@@ -3,14 +3,14 @@ import weakref
 from typing import Iterable, Optional
 
 from braandket.backend import Backend
-from braandket.tensor import PureStateTensor
+from braandket.tensor import PureStateTensor, StateTensor
 from braandket.space.hilbert_space import KetSpace
 
 
 # state
 
 class QState:
-    def __init__(self, tensor: PureStateTensor, related_systems: Iterable['QModel'] = ()):
+    def __init__(self, tensor: StateTensor, related_systems: Iterable['QModel'] = ()):
         self._tensor = tensor
         self._related_systems = weakref.WeakSet(related_systems)
         for system in self._related_systems:
@@ -18,11 +18,11 @@ class QState:
             system._set_state(self)
 
     @property
-    def tensor(self) -> PureStateTensor:
+    def tensor(self) -> StateTensor:
         return self._tensor
 
     @tensor.setter
-    def tensor(self, tensor: PureStateTensor):
+    def tensor(self, tensor: StateTensor):
         self._tensor = tensor
 
     def _add_related_system(self, system: 'QModel'):
