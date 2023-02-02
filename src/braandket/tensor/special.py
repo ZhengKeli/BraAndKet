@@ -1,4 +1,5 @@
-from typing import Any, Iterable, Optional, Union
+import abc
+from typing import Any, Generic, Iterable, Optional, Union
 
 from braandket.backend import Backend, ValuesType, get_default_backend
 from braandket.space import KetSpace, NumSpace, Space
@@ -42,7 +43,25 @@ class NumericTensor(QTensor[ValuesType]):
         return self @ other
 
 
-class PureStateTensor(QTensor[ValuesType]):
+class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
+    @abc.abstractmethod
+    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'StateTensor':
+        pass
+
+    @abc.abstractmethod
+    def norm(self) -> 'NumericTensor':
+        pass
+
+    @abc.abstractmethod
+    def normalize(self) -> 'StateTensor':
+        pass
+
+    @abc.abstractmethod
+    def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
+        pass
+
+
+class PureStateTensor(StateTensor[ValuesType]):
 
     @classmethod
     def of(cls,
@@ -75,6 +94,9 @@ class PureStateTensor(QTensor[ValuesType]):
 
     # special operations
 
+    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> Union['PureStateTensor', 'MixedStateTensor']:
+        pass  # TODO
+
     def norm(self) -> 'NumericTensor':
         from .operations import abs
         return abs(NumericTensor.of(self.ct @ self))
@@ -95,7 +117,7 @@ class PureStateTensor(QTensor[ValuesType]):
         pass
 
 
-class MixedStateTensor(QTensor[ValuesType]):
+class MixedStateTensor(StateTensor[ValuesType]):
     @classmethod
     def of(cls,
             values: Union[QTensor, Any],
@@ -124,12 +146,14 @@ class MixedStateTensor(QTensor[ValuesType]):
         ket_axes, bra_axes = _index_spaces_pairs(spaces)
         return self.backend.trace(values, (ket_axes, bra_axes))
 
+    def norm(self) -> 'NumericTensor':
+        return NumericTensor.of(self.trace(*self.ket_spaces))
+
     def normalize(self) -> 'MixedStateTensor':
-        return self / self.trace(*self.ket_spaces)
+        return self / self.norm()
 
     def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
-        # TODO
-        pass
+        pass  # TODO
 
 
 class OperatorTensor(QTensor[ValuesType]):
