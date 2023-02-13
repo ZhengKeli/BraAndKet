@@ -307,35 +307,35 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return cls.of(values, (*num_spaces, *ket_spaces, *bra_spaces), backend=backend)
 
     def flatten(self,
-            *spaces: KetSpace,
+            spaces: Optional[Iterable[Union[NumSpace, KetSpace, BraSpace]]] = None, *,
+            num_spaces: Optional[Iterable[NumSpace]] = None,
             ket_spaces: Optional[Iterable[KetSpace]] = None,
             bra_spaces: Optional[Iterable[BraSpace]] = None,
-            num_spaces: Optional[Iterable[NumSpace]] = None,
     ) -> tuple[ValuesType, tuple[Union[NumSpace, tuple[KetSpace, ...], tuple[BraSpace, ...]], ...]]:
-        if len(spaces) > 0:
-            if ket_spaces is not None:
-                raise ValueError("Unexpected argument \"ket_spaces\"!")
-            ket_spaces = tuple(spaces)
-            if bra_spaces is not None:
-                raise ValueError("Unexpected argument \"bra_spaces\"!")
-            num_spaces = tuple(num_spaces) if num_spaces is not None else ()
-            return self.flatten(ket_spaces=ket_spaces, num_spaces=num_spaces)
+        num_spaces_sl = tuple(space for space in self.spaces if isinstance(space, NumSpace))
+        ket_spaces_sl = tuple(space for space in self.spaces if isinstance(space, KetSpace))
+        bra_spaces_sl = tuple(space for space in self.spaces if isinstance(space, BraSpace))
 
-        ket_spaces = list(ket_spaces) if ket_spaces is not None else []
-        for space in self._spaces:
-            if isinstance(space, KetSpace) and space not in ket_spaces:
-                ket_spaces.append(space)
-
-        bra_spaces = list(bra_spaces) if bra_spaces is not None else [space.ct for space in ket_spaces]
-        for space in self._spaces:
-            if isinstance(space, BraSpace) and space not in bra_spaces:
-                bra_spaces.append(space)
-        bra_spaces = [space for space in bra_spaces if space in self._spaces]
+        spaces = tuple(spaces) if spaces is not None else ()
+        num_spaces_sp = tuple(space for space in spaces if isinstance(space, NumSpace))
+        ket_spaces_sp = tuple(space for space in spaces if isinstance(space, KetSpace))
+        bra_spaces_sp = tuple(space for space in spaces if isinstance(space, BraSpace))
 
         num_spaces = list(num_spaces) if num_spaces is not None else []
-        for space in self._spaces:
-            if isinstance(space, NumSpace) and space not in num_spaces:
+        for space in (*num_spaces_sp, *num_spaces_sl):
+            if space not in num_spaces:
                 num_spaces.append(space)
+
+        ket_spaces = list(ket_spaces) if ket_spaces is not None else []
+        for space in (*ket_spaces_sp, *ket_spaces_sl):
+            if space not in ket_spaces:
+                ket_spaces.append(space)
+
+        bra_spaces_kt = tuple(space.ct for space in ket_spaces if space.ct in bra_spaces_sl)
+        bra_spaces = list(bra_spaces) if bra_spaces is not None else []
+        for space in (*bra_spaces_sp, *bra_spaces_kt, *bra_spaces_sl):
+            if space not in bra_spaces:
+                bra_spaces.append(space)
 
         shape = (*(space.n for space in num_spaces),
                  prod(*(space.n for space in ket_spaces)),
@@ -344,12 +344,17 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return values, (*num_spaces, tuple(ket_spaces), tuple(bra_spaces))
 
     def flattened_values(self,
-            *spaces: KetSpace,
+            spaces: Optional[Iterable[Union[NumSpace, KetSpace, BraSpace]]] = None, *,
+            num_spaces: Optional[Iterable[NumSpace]] = None,
             ket_spaces: Optional[Iterable[KetSpace]] = None,
             bra_spaces: Optional[Iterable[BraSpace]] = None,
-            num_spaces: Optional[Iterable[NumSpace]] = None,
     ) -> ValuesType:
-        return self.flatten(*spaces, ket_spaces=ket_spaces, bra_spaces=bra_spaces, num_spaces=num_spaces)[0]
+        return self.flatten(
+            spaces,
+            num_spaces=num_spaces,
+            ket_spaces=ket_spaces,
+            bra_spaces=bra_spaces
+        )[0]
 
 
 # utils
