@@ -284,7 +284,27 @@ class QTensor(Generic[ValuesType], abc.ABC):
         from .special import OperatorTensor
         return OperatorTensor.of(self)
 
-    # flatten
+    # inflate & flatten
+
+    @classmethod
+    def inflate(cls,
+            values: ValuesType,
+            spaces: Iterable[Union[NumSpace, Iterable[KetSpace], Iterable[BraSpace]]], *,
+            backend: Optional[Backend] = None
+    ) -> 'QTensor':
+        if backend is None:
+            backend = get_default_backend()
+
+        spaces = tuple(spaces)
+        num_spaces = spaces[:-2]
+        ket_spaces = tuple(spaces[-2])
+        bra_spaces = tuple(spaces[-1])
+
+        shape = (*(space.n for space in num_spaces),
+                 *(space.n for space in ket_spaces),
+                 *(space.n for space in bra_spaces))
+        values = backend.reshape(values, shape)
+        return cls.of(values, (*num_spaces, *ket_spaces, *bra_spaces), backend=backend)
 
     def flatten(self,
             *spaces: KetSpace,
