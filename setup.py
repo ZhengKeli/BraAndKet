@@ -31,10 +31,8 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         'numpy',
-        'tqdm'
     ],
     extras_require={
-        "sparse matrix": ['scipy'],
-        "pade": ['scipy'],
+        "tensorflow backend": ['tensorflow'],
     },
 )
