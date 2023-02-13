@@ -1,36 +1,28 @@
+from contextvars import ContextVar
+
 from .backend import Backend
 from .numpy_backend import numpy_backend
 
-
-# default
-
-_default_backend = numpy_backend
+_backend_stack_context_var: ContextVar[tuple[Backend, ...]] = ContextVar("backend_stack", default=(numpy_backend,))
 
 
 def get_default_backend() -> Backend:
-    return _default_backend
+    return _backend_stack_context_var.get()[-1]
 
 
 def set_default_backend(backend: Backend):
-    global _default_backend
-    _default_backend = backend
-
-
-# context
-
-_context_backend_stack = []
+    backend_stack = _backend_stack_context_var.get()
+    _backend_stack_context_var.set((*backend_stack[:-1], backend))
 
 
 def push_context_backend(backend: Backend):
-    global _context_backend_stack
-    _context_backend_stack.append(get_default_backend())
-    set_default_backend(backend)
+    backend_stack = _backend_stack_context_var.get()
+    _backend_stack_context_var.set((*backend_stack, backend))
 
 
 def pop_context_backend() -> Backend:
-    global _context_backend_stack
-    backend = _context_backend_stack.pop()
-    set_default_backend(backend)
-    return backend
-
-# TODO thread-safe?
+    backend_stack = _backend_stack_context_var.get()
+    if not len(backend_stack) > 1:
+        raise RuntimeError("No enough backends in the context stack to pop!")
+    _backend_stack_context_var.set(backend_stack[:-1])
+    return backend_stack[-1]
