@@ -18,7 +18,7 @@ readme = "README.md"
 urls.repository = "https://github.com/ZhengKeli/BraAndKet"
 authors = [{ name = "Zheng Keli", email = "zhengkeli2009@126.com" }]
 
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 dependencies = ["numpy"]
 optional-dependencies.tf = ["tensorflow"]
 
