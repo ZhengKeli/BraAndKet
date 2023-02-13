@@ -295,10 +295,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
         if backend is None:
             backend = get_default_backend()
 
-        spaces = tuple(spaces)
-        num_spaces = spaces[:-2]
-        ket_spaces = tuple(spaces[-2])
-        bra_spaces = tuple(spaces[-1])
+        *num_spaces, ket_spaces, bra_spaces = spaces
 
         shape = (*(space.n for space in num_spaces),
                  *(space.n for space in ket_spaces),
