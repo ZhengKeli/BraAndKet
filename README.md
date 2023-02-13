@@ -186,27 +186,6 @@ print(result == ket_vec_1)
 
 ```
 
-(todo ...)
-
-## Pruning
-
-Sometimes, the space of system can be terribly big, since the space increases exponentially with the increase of the
-count of components.
-
-But in some cases, we just want to study the evolution of the system under certain conditions, for example from several
-specified start points evolves with some certain operators. Then, some states are in fact impossible to be reached. Then
-those unreachable states can be dropped out of the computation. Class `PrunedKetSpace` is designed for such cases.
-
-The static method `PrunedKetSpace.from_seed()` can automatically detect which eigenstates can be dropped, with the given
-starting states and evolution operators, and return an instance of `PrunedKetSpace` as a "reachable" space. This can
-significantly reduce the calculation and memory consumption.
-
-The pruned and original tensors can also be easily converted to each other using method `reduce()` and `inflate()`.
-
-## Evolve functions
-
-(todo ...)
-
 # Contribution
 
 This library is completely open source. Any contributions are welcomed. You can fork this repository, make some useful
