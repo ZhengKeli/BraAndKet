@@ -57,6 +57,10 @@ class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
         pass
 
     @abc.abstractmethod
+    def norm_and_normalize(self) -> tuple['NumericTensor', 'StateTensor']:
+        return self.norm(), self.normalize()
+
+    @abc.abstractmethod
     def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
         pass
 
@@ -102,8 +106,13 @@ class PureStateTensor(StateTensor[ValuesType]):
         return abs(NumericTensor.of(self.ct @ self))
 
     def normalize(self) -> 'PureStateTensor':
+        return self.norm_and_normalize()[1]
+
+    def norm_and_normalize(self) -> tuple['NumericTensor', 'PureStateTensor']:
         from .operations import sqrt
-        return self / sqrt(self.norm())
+        norm = self.norm()
+        normalized = self / sqrt(norm)
+        return norm, normalized
 
     def amplitudes(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
         # return self.values(*spaces)
@@ -150,7 +159,12 @@ class MixedStateTensor(StateTensor[ValuesType]):
         return NumericTensor.of(self.trace(*self.ket_spaces))
 
     def normalize(self) -> 'MixedStateTensor':
-        return self / self.norm()
+        return self.norm_and_normalize()[1]
+
+    def norm_and_normalize(self) -> tuple['NumericTensor', 'MixedStateTensor']:
+        norm = self.norm()
+        normalized = self / norm
+        return norm, normalized
 
     def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
         pass  # TODO
