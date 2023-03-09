@@ -44,9 +44,8 @@ class NumericTensor(QTensor[ValuesType]):
 
 
 class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
-    @abc.abstractmethod
-    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'StateTensor':
-        pass
+
+    # norm
 
     @abc.abstractmethod
     def norm(self) -> 'NumericTensor':
@@ -59,6 +58,16 @@ class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
     @abc.abstractmethod
     def norm_and_normalize(self) -> tuple['NumericTensor', 'StateTensor']:
         return self.norm(), self.normalize()
+
+    # component
+
+    @abc.abstractmethod
+    def component(self, indices: Union[Iterable[tuple[KetSpace, int]], dict[KetSpace, int]]) -> 'StateTensor':
+        pass
+
+    @abc.abstractmethod
+    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'StateTensor':
+        pass
 
     @abc.abstractmethod
     def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
@@ -96,10 +105,7 @@ class PureStateTensor(StateTensor[ValuesType]):
     def ket_spaces(self) -> tuple[KetSpace, ...]:
         return tuple(space for space in self.spaces if isinstance(space, KetSpace))
 
-    # special operations
-
-    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> Union['PureStateTensor', 'MixedStateTensor']:
-        pass  # TODO
+    # norm
 
     def norm(self) -> 'NumericTensor':
         from .operations import abs
@@ -113,6 +119,18 @@ class PureStateTensor(StateTensor[ValuesType]):
         norm = self.norm()
         normalized = self / sqrt(norm)
         return norm, normalized
+
+    # component
+
+    def component(self, indices: Union[Iterable[tuple[KetSpace, int]], dict[KetSpace, int]]) -> 'PureStateTensor':
+        if isinstance(indices, dict):
+            indices = tuple(indices.items())
+        else:
+            indices = tuple(indices)
+        return PureStateTensor.of(self[indices])
+
+    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> Union['PureStateTensor', 'MixedStateTensor']:
+        pass  # TODO
 
     def amplitudes(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
         # return self.values(*spaces)
@@ -150,10 +168,7 @@ class MixedStateTensor(StateTensor[ValuesType]):
     def ket_spaces(self) -> tuple[KetSpace, ...]:
         return self._ket_spaces
 
-    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'MixedStateTensor':
-        values, spaces = self.values_and_spaces(*spaces)
-        ket_axes, bra_axes = _index_spaces_pairs(spaces)
-        return self.backend.trace(values, (ket_axes, bra_axes))
+    # norm
 
     def norm(self) -> 'NumericTensor':
         return NumericTensor.of(self.trace(*self.ket_spaces))
@@ -165,6 +180,21 @@ class MixedStateTensor(StateTensor[ValuesType]):
         norm = self.norm()
         normalized = self / norm
         return norm, normalized
+
+    # component
+
+    def component(self, indices: Union[Iterable[tuple[KetSpace, int]], dict[KetSpace, int]]) -> 'MixedStateTensor':
+        if isinstance(indices, dict):
+            ket_indices = tuple(indices.items())
+        else:
+            ket_indices = tuple(indices)
+        bra_indices = tuple((ket_space.ct, index) for ket_space, index in ket_indices)
+        return MixedStateTensor.of(self[ket_indices + bra_indices])
+
+    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'MixedStateTensor':
+        values, spaces = self.values_and_spaces(*spaces)
+        ket_axes, bra_axes = _index_spaces_pairs(spaces)
+        return self.backend.trace(values, (ket_axes, bra_axes))
 
     def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
         pass  # TODO
