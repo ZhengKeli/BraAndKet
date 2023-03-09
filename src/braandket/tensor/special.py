@@ -70,7 +70,9 @@ class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
         pass
 
     @abc.abstractmethod
-    def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
+    def probabilities(self,
+            *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
+    ) -> ValuesType:
         pass
 
 
@@ -129,19 +131,19 @@ class PureStateTensor(StateTensor[ValuesType]):
             indices = tuple(indices)
         return PureStateTensor.of(self[indices])
 
-    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> Union['PureStateTensor', 'MixedStateTensor']:
-        pass  # TODO
+    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'MixedStateTensor':
+        return MixedStateTensor.of(self @ self.ct).trace(*spaces)
 
-    def amplitudes(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
-        # return self.values(*spaces)
-        # TODO
-        pass
+    def amplitudes(self,
+            *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
+    ) -> ValuesType:
+        return self.values(*spaces)
 
-    def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
-        # amplitudes = self.amplitudes(*spaces)
-        # return self.backend.mul(self.backend.conj(amplitudes), amplitudes)
-        # TODO
-        pass
+    def probabilities(self,
+            *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
+    ) -> ValuesType:
+        amplitudes = self.amplitudes(*spaces)
+        return self.backend.mul(self.backend.conj(amplitudes), amplitudes)
 
 
 class MixedStateTensor(StateTensor[ValuesType]):
@@ -192,12 +194,25 @@ class MixedStateTensor(StateTensor[ValuesType]):
         return MixedStateTensor.of(self[ket_indices + bra_indices])
 
     def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'MixedStateTensor':
-        values, spaces = self.values_and_spaces(*spaces)
+        values, spaces = self.values_and_slices(*spaces)
         ket_axes, bra_axes = _index_spaces_pairs(spaces)
         return self.backend.trace(values, (ket_axes, bra_axes))
 
-    def probabilities(self, *spaces: Union[NumSpace, KetSpace]) -> ValuesType:
-        pass  # TODO
+    def probabilities(self,
+            *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
+    ) -> ValuesType:
+        bra_spaces = []
+        for space_or_pair in spaces:
+            if isinstance(space_or_pair, Space):
+                space, index = space_or_pair, None
+            else:
+                space, index = space_or_pair
+            if isinstance(space, KetSpace):
+                if index is None:
+                    bra_spaces.append(space.ct)
+                else:
+                    bra_spaces.append((space.ct, index))
+        return self.values(*spaces, *bra_spaces)
 
 
 class OperatorTensor(QTensor[ValuesType]):
