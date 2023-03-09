@@ -44,6 +44,10 @@ class NumericTensor(QTensor[ValuesType]):
 
 
 class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
+    @property
+    @abc.abstractmethod
+    def ket_spaces(self) -> tuple[KetSpace, ...]:
+        pass
 
     # norm
 
@@ -97,6 +101,7 @@ class PureStateTensor(StateTensor[ValuesType]):
             if not isinstance(space, (NumSpace, KetSpace)):
                 raise TypeError(f"PureStateTensor accepts only KetSpace and NumSpace, got {space}!")
         super().__init__(values, spaces, backend)
+        self._ket_spaces = tuple(space for space in spaces if isinstance(space, KetSpace))
 
     @property
     def spaces(self) -> tuple[Union[NumSpace, KetSpace], ...]:
@@ -105,7 +110,7 @@ class PureStateTensor(StateTensor[ValuesType]):
 
     @property
     def ket_spaces(self) -> tuple[KetSpace, ...]:
-        return tuple(space for space in self.spaces if isinstance(space, KetSpace))
+        return self._ket_spaces
 
     # norm
 
