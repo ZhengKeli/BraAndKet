@@ -70,7 +70,7 @@ class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
         pass
 
     @abc.abstractmethod
-    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'StateTensor':
+    def trace(self, *spaces: KetSpace) -> 'StateTensor':
         pass
 
     @abc.abstractmethod
@@ -136,7 +136,7 @@ class PureStateTensor(StateTensor[ValuesType]):
             indices = tuple(indices)
         return PureStateTensor.of(self[indices])
 
-    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'MixedStateTensor':
+    def trace(self, *spaces: KetSpace) -> 'MixedStateTensor':
         return MixedStateTensor.of(self @ self.ct).trace(*spaces)
 
     def amplitudes(self,
@@ -198,7 +198,7 @@ class MixedStateTensor(StateTensor[ValuesType]):
         bra_indices = tuple((ket_space.ct, index) for ket_space, index in ket_indices)
         return MixedStateTensor.of(self[ket_indices + bra_indices])
 
-    def trace(self, *spaces: Union[NumSpace, KetSpace]) -> 'MixedStateTensor':
+    def trace(self, *spaces: KetSpace) -> 'MixedStateTensor':
         values, spaces = self.values_and_slices(*spaces)
         ket_axes, bra_axes = _index_spaces_pairs(spaces)
         return self.backend.trace(values, (ket_axes, bra_axes))
