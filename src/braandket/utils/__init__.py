@@ -1,1 +1,1 @@
-from .utils import structured_iter, structured_map
+from .utils import iter_structure, map_structure

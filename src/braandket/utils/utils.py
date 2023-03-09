@@ -1,4 +1,4 @@
-def structured_iter(structure):
+def iter_structure(structure):
     if structure is None:
         return
     try:
@@ -7,18 +7,18 @@ def structured_iter(structure):
         structure_iter = None
     if structure_iter is not None:
         for structure_item in structure_iter:
-            for sub_item in structured_iter(structure_item):
+            for sub_item in iter_structure(structure_item):
                 yield sub_item
     else:
         yield structure
 
 
-def structured_map(structure, map_func):
+def map_structure(structure, map_func):
     if structure is None:
         return None
     if isinstance(structure, list):
-        return [structured_map(item, map_func) for item in structure]
+        return [map_structure(item, map_func) for item in structure]
     elif isinstance(structure, tuple):
-        return tuple(structured_map(item, map_func) for item in structure)
+        return tuple(map_structure(item, map_func) for item in structure)
     else:
         return map_func(structure)
