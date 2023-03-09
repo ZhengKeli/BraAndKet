@@ -56,38 +56,58 @@ class QTensor(Generic[ValuesType], abc.ABC):
 
     # basic operations
 
-    def values(self, *spaces: Space) -> ValuesType:
-        """ get values from this tensor """
-        return self.values_and_spaces(*spaces)[0]
-
     @property
     def spaces(self) -> tuple[Space, ...]:
         return self._spaces
 
-    def values_and_spaces(self, *spaces: Space) -> tuple[ValuesType, tuple[Space, ...]]:
-        spaces = list(spaces)
-        if len(spaces) == 0:
+    def values(self, *slices: Union[Space, tuple[Space, Union[int, None]]]) -> ValuesType:
+        """ get values from this tensor """
+        return self.values_and_slices(*slices)[0]
+
+    def values_and_slices(self,
+            *slices: Union[Space, tuple[Space, Union[int, None]]]
+    ) -> tuple[ValuesType, tuple[Union[Space, tuple[Space, int]], ...]]:
+        if len(slices) == 0:
             return self._values, self._spaces
 
-        # find corresponding axes of the specified spaces
+        # parse arguments
+        sp_slices = slices
+        spaces = []
+        slices = []
+        for sl in sp_slices:
+            if isinstance(sl, Space):
+                space, index = sl, None
+            else:
+                space, index = sl
+            spaces.append(space)
+            slices.append(index)
+
+        # find axes of the specified spaces
         axes = []
         for space in spaces:
-            try:
-                axis = self._spaces.index(space)
-            except ValueError:
-                raise ValueError("Space not found!")
+            axis = self._spaces.index(space)
             axes.append(axis)
 
-        # fill non-specified spaces
+        # fill axes of unspecified spaces
         axes_set = frozenset(axes)
         for axis, space in enumerate(self._spaces):
             if axis not in axes_set:
                 axes.append(axis)
                 spaces.append(space)
+                slices.append(None)
 
-        values = self.backend.transpose(self._values, axes=axes)
-        spaces = tuple(spaces)
-        return values, spaces
+        # values slices
+        values_slices = tuple((slice(None) if sl is None else sl) for sl in slices)
+
+        # manipulate values
+        values = self._values
+        values = self.backend.transpose(values, axes=axes)
+        values = self.backend.slice(values, slices=values_slices)
+
+        # slices for output
+        sp_slices = tuple((sp if sl is None else (sp, sl)) for sp, sl in zip(spaces, slices))
+
+        return values, sp_slices
 
     # common operations
 
