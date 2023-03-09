@@ -2,7 +2,6 @@ import abc
 from typing import Any, Generic, Iterable, Optional, Union
 from typing import TypeVar
 
-
 ValuesType = TypeVar('ValuesType')
 
 
@@ -115,7 +114,7 @@ class Backend(Generic[ValuesType], abc.ABC):
         pass
 
     @abc.abstractmethod
-    def slice(self, values: ValuesType, *, slices: Union[int, slice, tuple[Union[int, slice]]]) -> ValuesType:
+    def slice(self, values: ValuesType, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> ValuesType:
         pass
 
     @abc.abstractmethod

@@ -115,7 +115,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
                 values = tf.repeat(values, size, axis)
         return values
 
-    def slice(self, values: tf.Tensor, *, slices: Union[int, slice, tuple[Union[int, slice]]]) -> tf.Tensor:
+    def slice(self, values: tf.Tensor, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> tf.Tensor:
         return values[slices]
 
     def trace(self, values: tf.Tensor, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:

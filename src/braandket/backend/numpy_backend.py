@@ -93,7 +93,7 @@ class NumpyBackend(Backend[np.ndarray]):
                 values = np.repeat(values, size, axis)
         return values
 
-    def slice(self, values: np.ndarray, *, slices: Union[int, slice, tuple[Union[int, slice]]]) -> np.ndarray:
+    def slice(self, values: np.ndarray, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> np.ndarray:
         return values[slices]
 
     def trace(self, values: np.ndarray, axes: tuple[Iterable[int], Iterable[int]]) -> np.ndarray:
