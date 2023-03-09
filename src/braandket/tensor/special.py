@@ -73,6 +73,12 @@ class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
     def trace(self, *spaces: KetSpace) -> 'StateTensor':
         pass
 
+    def remain(self, *spaces: KetSpace) -> 'StateTensor':
+        all_ket_spaces = frozenset(self.ket_spaces)
+        remain_ket_spaces_set = frozenset(spaces)
+        traced_ket_spaces = all_ket_spaces - remain_ket_spaces_set
+        return self.trace(*traced_ket_spaces)
+
     @abc.abstractmethod
     def probabilities(self,
             *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
