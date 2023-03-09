@@ -96,7 +96,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
             items = dict(items)
 
         slices = tuple(items.get(sp, slice(None)) for sp in self._spaces)
-        new_spaces = tuple(sp for sp in self._spaces if sp in items)
+        new_spaces = tuple(sp for sp in self._spaces if sp not in items)
         new_values = self.backend.slice(self._values, slices=slices)
         return self.spawn(new_values, new_spaces)
 
