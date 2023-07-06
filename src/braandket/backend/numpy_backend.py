@@ -117,10 +117,10 @@ class NumpyBackend(Backend[np.ndarray]):
         return values
 
     def dot(self,
-            values0: np.ndarray, values1: np.ndarray, *,
-            ndim0: int, ndim1: int,
-            dot_axes: tuple[Iterable[int], Iterable[int]],
-            bat_axes: tuple[Iterable[int], Iterable[int]],
+        values0: np.ndarray, values1: np.ndarray, *,
+        ndim0: int, ndim1: int,
+        dot_axes: tuple[Iterable[int], Iterable[int]],
+        bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[np.ndarray, tuple[tuple[int, ...], tuple[int, ...]]]:
         bat_axes0, bat_axes1 = tuple(bat_axes[0]), tuple(bat_axes[1])
         if not len(bat_axes0) == len(bat_axes1):

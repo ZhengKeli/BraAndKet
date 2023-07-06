@@ -3,8 +3,8 @@ import weakref
 from typing import Iterable, Optional
 
 from braandket.backend import Backend
+from braandket.space import KetSpace
 from braandket.tensor import PureStateTensor, StateTensor
-from braandket.space.hilbert_space import KetSpace
 
 
 # state

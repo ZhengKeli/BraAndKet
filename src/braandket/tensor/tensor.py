@@ -66,7 +66,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return self.values_and_slices(*slices)[0]
 
     def values_and_slices(self,
-            *slices: Union[Space, tuple[Space, Union[int, None]]]
+        *slices: Union[Space, tuple[Space, Union[int, None]]]
     ) -> tuple[ValuesType, tuple[Union[Space, tuple[Space, int]], ...]]:
         if len(slices) == 0:
             return self._values, self._spaces
@@ -309,9 +309,9 @@ class QTensor(Generic[ValuesType], abc.ABC):
 
     @classmethod
     def inflate(cls,
-            values: ValuesType,
-            spaces: Iterable[Union[NumSpace, KetSpace, BraSpace, Iterable[Union[NumSpace, KetSpace, BraSpace]]]], *,
-            backend: Optional[Backend] = None
+        values: ValuesType,
+        spaces: Iterable[Union[NumSpace, KetSpace, BraSpace, Iterable[Union[NumSpace, KetSpace, BraSpace]]]], *,
+        backend: Optional[Backend] = None
     ) -> 'QTensor':
         if backend is None:
             backend = get_default_backend()
@@ -321,10 +321,10 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return cls.of(values, spaces, backend=backend)
 
     def flatten(self,
-            spaces: Optional[Iterable[Union[NumSpace, KetSpace, BraSpace]]] = None, *,
-            num_spaces: Optional[Iterable[NumSpace]] = None,
-            ket_spaces: Optional[Iterable[KetSpace]] = None,
-            bra_spaces: Optional[Iterable[BraSpace]] = None,
+        spaces: Optional[Iterable[Union[NumSpace, KetSpace, BraSpace]]] = None, *,
+        num_spaces: Optional[Iterable[NumSpace]] = None,
+        ket_spaces: Optional[Iterable[KetSpace]] = None,
+        bra_spaces: Optional[Iterable[BraSpace]] = None,
     ) -> tuple[ValuesType, tuple[Union[NumSpace, tuple[KetSpace, ...], tuple[BraSpace, ...]], ...]]:
         num_spaces_sl = tuple(space for space in self.spaces if isinstance(space, NumSpace))
         ket_spaces_sl = tuple(space for space in self.spaces if isinstance(space, KetSpace))
@@ -358,10 +358,10 @@ class QTensor(Generic[ValuesType], abc.ABC):
         return values, (*num_spaces, tuple(ket_spaces), tuple(bra_spaces))
 
     def flattened_values(self,
-            spaces: Optional[Iterable[Union[NumSpace, KetSpace, BraSpace]]] = None, *,
-            num_spaces: Optional[Iterable[NumSpace]] = None,
-            ket_spaces: Optional[Iterable[KetSpace]] = None,
-            bra_spaces: Optional[Iterable[BraSpace]] = None,
+        spaces: Optional[Iterable[Union[NumSpace, KetSpace, BraSpace]]] = None, *,
+        num_spaces: Optional[Iterable[NumSpace]] = None,
+        ket_spaces: Optional[Iterable[KetSpace]] = None,
+        bra_spaces: Optional[Iterable[BraSpace]] = None,
     ) -> ValuesType:
         return self.flatten(
             spaces,

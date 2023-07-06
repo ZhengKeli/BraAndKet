@@ -139,10 +139,10 @@ class TensorflowBackend(Backend[tf.Tensor]):
         return values
 
     def dot(self,
-            values0: tf.Tensor, values1: tf.Tensor, *,
-            ndim0: int, ndim1: int,
-            dot_axes: tuple[Iterable[int], Iterable[int]],
-            bat_axes: tuple[Iterable[int], Iterable[int]],
+        values0: tf.Tensor, values1: tf.Tensor, *,
+        ndim0: int, ndim1: int,
+        dot_axes: tuple[Iterable[int], Iterable[int]],
+        bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[tf.Tensor, tuple[tuple[int, ...], tuple[int, ...]]]:
         bat_axes0, bat_axes1 = tuple(bat_axes[0]), tuple(bat_axes[1])
         if not len(bat_axes0) == len(bat_axes1):

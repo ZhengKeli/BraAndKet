@@ -1,1 +1,1 @@
-from .model import QModel, QComposed, QParticle, QState
+from .model import QComposed, QModel, QParticle, QState

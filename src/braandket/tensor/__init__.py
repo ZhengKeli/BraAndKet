@@ -1,8 +1,4 @@
-from .operations import abs, cos, exp, sin
-from .operations import choose, take
-from .operations import eigenstate, identity, ones, operator, projector, zeros
-from .operations import one, pi, zero
-from .operations import pow, sqrt, square
-from .operations import prod, sum, sum_ct
+from .operations import abs, choose, cos, eigenstate, exp, identity, one, ones, operator, pi, pow, prod, projector, sin, \
+    sqrt, square, sum, sum_ct, take, zero, zeros
 from .special import MixedStateTensor, NumericTensor, OperatorTensor, PureStateTensor, StateTensor
 from .tensor import QTensor

@@ -1,6 +1,5 @@
 import abc
-from typing import Any, Generic, Iterable, Optional, Union
-from typing import TypeVar
+from typing import Any, Generic, Iterable, Optional, TypeVar, Union
 
 ValuesType = TypeVar('ValuesType')
 
@@ -127,10 +126,10 @@ class Backend(Generic[ValuesType], abc.ABC):
 
     @abc.abstractmethod
     def dot(self,
-            values0: ValuesType, values1: ValuesType, *,
-            ndim0: int, ndim1: int,
-            dot_axes: tuple[Iterable[int], Iterable[int]],
-            bat_axes: tuple[Iterable[int], Iterable[int]],
+        values0: ValuesType, values1: ValuesType, *,
+        ndim0: int, ndim1: int,
+        dot_axes: tuple[Iterable[int], Iterable[int]],
+        bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[ValuesType, tuple[tuple[int, ...], tuple[int, ...]]]:
         pass
 
