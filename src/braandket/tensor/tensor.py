@@ -3,6 +3,7 @@ from typing import Any, Generic, Iterable, Optional, Union
 
 from braandket.backend import Backend, ValuesType, get_default_backend
 from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
+from braandket.utils import iter_structure
 
 
 class QTensor(Generic[ValuesType], abc.ABC):
@@ -309,19 +310,15 @@ class QTensor(Generic[ValuesType], abc.ABC):
     @classmethod
     def inflate(cls,
             values: ValuesType,
-            spaces: Iterable[Union[NumSpace, Iterable[KetSpace], Iterable[BraSpace]]], *,
+            spaces: Iterable[Union[NumSpace, KetSpace, BraSpace, Iterable[Union[NumSpace, KetSpace, BraSpace]]]], *,
             backend: Optional[Backend] = None
     ) -> 'QTensor':
         if backend is None:
             backend = get_default_backend()
-
-        *num_spaces, ket_spaces, bra_spaces = spaces
-
-        shape = (*(space.n for space in num_spaces),
-                 *(space.n for space in ket_spaces),
-                 *(space.n for space in bra_spaces))
+        spaces = tuple(iter_structure(spaces))
+        shape = tuple(space.n for space in spaces)
         values = backend.reshape(values, shape)
-        return cls.of(values, (*num_spaces, *ket_spaces, *bra_spaces), backend=backend)
+        return cls.of(values, spaces, backend=backend)
 
     def flatten(self,
             spaces: Optional[Iterable[Union[NumSpace, KetSpace, BraSpace]]] = None, *,
