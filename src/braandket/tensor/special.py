@@ -243,12 +243,12 @@ class OperatorTensor(QTensor[ValuesType]):
     @classmethod
     def from_matrix(cls,
         matrix: ValuesType,
-        ket_spaces: Iterable[KetSpace],
-        num_spaces: Iterable[NumSpace] = (), *,
+        ket_spaces: Iterable[KetSpace] | KetSpace,
+        num_spaces: Iterable[NumSpace] | NumSpace = (), *,
         backend: Optional[Backend] = None
     ) -> 'OperatorTensor':
-        num_spaces = tuple(num_spaces)
-        ket_spaces = tuple(ket_spaces)
+        num_spaces = (num_spaces,) if isinstance(num_spaces, NumSpace) else tuple(num_spaces)
+        ket_spaces = (ket_spaces,) if isinstance(ket_spaces, KetSpace) else tuple(ket_spaces)
         bra_spaces = tuple(space.ct for space in ket_spaces)
         spaces = num_spaces + ket_spaces + bra_spaces
         backend = backend or get_default_backend()
