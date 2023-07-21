@@ -244,7 +244,7 @@ class OperatorTensor(QTensor[ValuesType]):
     def from_matrix(cls,
         matrix: ValuesType,
         ket_spaces: Iterable[KetSpace],
-        num_spaces: Iterable[KetSpace] = (), *,
+        num_spaces: Iterable[NumSpace] = (), *,
         backend: Optional[Backend] = None
     ) -> 'OperatorTensor':
         num_spaces = tuple(num_spaces)
