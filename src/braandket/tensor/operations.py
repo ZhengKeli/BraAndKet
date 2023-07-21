@@ -6,21 +6,21 @@ from braandket.space import HSpace, KetSpace, NumSpace, Space
 from .special import NumericTensor, OperatorTensor, PureStateTensor
 from .tensor import QTensor
 
-
 # constants
 
-def zero(*, backend: Optional[Backend] = None):
-    return QTensor.of(0, (), backend=backend)
-
-
-def one(*, backend: Optional[Backend] = None):
-    return QTensor.of(1, (), backend=backend)
-
-
+e = math.e
 pi = math.pi
 
 
 # constructors
+
+def zero(*, backend: Optional[Backend] = None) -> NumericTensor:
+    return NumericTensor.of(0, (), backend=backend)
+
+
+def one(*, backend: Optional[Backend] = None) -> NumericTensor:
+    return NumericTensor.of(1, (), backend=backend)
+
 
 def zeros(space: NumSpace, *, backend: Optional[Backend] = None) -> NumericTensor:
     backend = backend or get_default_backend()
