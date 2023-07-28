@@ -13,7 +13,7 @@ guaranteed. Breaking changes are happening every day! Using this library right n
 
 ## Installation
 
-You can install the latest release from [PiPy](https://pypi.org/project/BraAndKet/).
+You can install the latest release from [PyPI](https://pypi.org/project/BraAndKet/).
 
 ```shell
 pip install braandket
