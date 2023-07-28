@@ -1,3 +1,19 @@
+# v0.8.3
+
+Improvements:
+
+* Allowed `QTensor.inflate()` to process any shape.
+* Allowed `OperatorTensor.from_matrix()` to accept a single space.
+
+Bug fixes:
+
+* Fixed a wrong type hint in `OperatorTensor.from_matrix()`.
+
+Development:
+
+* Reformat code with new rules.
+* Optimized code in `braandket.tensor.operations`.
+
 # v0.8.2
 
 Bug fixes:
