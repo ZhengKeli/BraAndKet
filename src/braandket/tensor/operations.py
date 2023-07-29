@@ -1,7 +1,7 @@
 import math
 from typing import Any, Callable, Iterable, Optional, Union
 
-from braandket.backend import Backend, ValuesType, get_default_backend
+from braandket.backend import Backend, BackendValue, get_default_backend
 from braandket.space import HSpace, KetSpace, NumSpace, Space
 from .special import NumericTensor, OperatorTensor, PureStateTensor
 from .tensor import QTensor
@@ -139,7 +139,7 @@ def _expand_with_identities(tensor: OperatorTensor, *spaces: KetSpace):
 
 # numeric
 
-def _construct_wrapped_unary_op(func: Callable[[ValuesType], ValuesType]):
+def _construct_wrapped_unary_op(func: Callable[[BackendValue], BackendValue]):
     def wrapped_op(value: Union[NumericTensor, Any]) -> NumericTensor:
         value = NumericTensor.of(value)
         op = getattr(value.backend, func.__name__)

@@ -1,12 +1,12 @@
 import abc
 from typing import Any, Generic, Iterable, Optional, Union
 
-from braandket.backend import Backend, ValuesType, get_default_backend
+from braandket.backend import Backend, BackendValue, get_default_backend
 from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
 from braandket.utils import iter_structure
 
 
-class QTensor(Generic[ValuesType], abc.ABC):
+class QTensor(Generic[BackendValue], abc.ABC):
 
     @classmethod
     def of(cls, values: Any, spaces: Iterable[Space], *, backend: Optional[Backend] = None) -> 'QTensor':
@@ -48,7 +48,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
         self._backend = backend
 
     @property
-    def backend(self) -> Backend[ValuesType]:
+    def backend(self) -> Backend[BackendValue]:
         return self._backend
 
     def spawn(self, values: Any, spaces: Iterable[Space]) -> 'QTensor':
@@ -61,13 +61,13 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def spaces(self) -> tuple[Space, ...]:
         return self._spaces
 
-    def values(self, *slices: Union[Space, tuple[Space, Union[int, None]]]) -> ValuesType:
+    def values(self, *slices: Union[Space, tuple[Space, Union[int, None]]]) -> BackendValue:
         """ get values from this tensor """
         return self.values_and_slices(*slices)[0]
 
     def values_and_slices(self,
         *slices: Union[Space, tuple[Space, Union[int, None]]]
-    ) -> tuple[ValuesType, tuple[Union[Space, tuple[Space, int]], ...]]:
+    ) -> tuple[BackendValue, tuple[Union[Space, tuple[Space, int]], ...]]:
         if len(slices) == 0:
             return self._values, self._spaces
 
@@ -147,7 +147,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
     def is_scalar(self) -> bool:
         return len(self.spaces) == 0
 
-    def scalar(self) -> ValuesType:
+    def scalar(self) -> BackendValue:
         """ get a scalar value from zero-dimension tensor """
         if not self.is_scalar:
             raise ValueError(f"This QTensor is not a scalar. It has {len(self.spaces)} spaces.")
@@ -309,7 +309,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
 
     @classmethod
     def inflate(cls,
-        values: ValuesType,
+        values: BackendValue,
         spaces: Iterable[Union[NumSpace, KetSpace, BraSpace, Iterable[Union[NumSpace, KetSpace, BraSpace]]]], *,
         backend: Optional[Backend] = None
     ) -> 'QTensor':
@@ -325,7 +325,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
         num_spaces: Optional[Iterable[NumSpace]] = None,
         ket_spaces: Optional[Iterable[KetSpace]] = None,
         bra_spaces: Optional[Iterable[BraSpace]] = None,
-    ) -> tuple[ValuesType, tuple[Union[NumSpace, tuple[KetSpace, ...], tuple[BraSpace, ...]], ...]]:
+    ) -> tuple[BackendValue, tuple[Union[NumSpace, tuple[KetSpace, ...], tuple[BraSpace, ...]], ...]]:
         num_spaces_sl = tuple(space for space in self.spaces if isinstance(space, NumSpace))
         ket_spaces_sl = tuple(space for space in self.spaces if isinstance(space, KetSpace))
         bra_spaces_sl = tuple(space for space in self.spaces if isinstance(space, BraSpace))
@@ -362,7 +362,7 @@ class QTensor(Generic[ValuesType], abc.ABC):
         num_spaces: Optional[Iterable[NumSpace]] = None,
         ket_spaces: Optional[Iterable[KetSpace]] = None,
         bra_spaces: Optional[Iterable[BraSpace]] = None,
-    ) -> ValuesType:
+    ) -> BackendValue:
         return self.flatten(
             spaces,
             num_spaces=num_spaces,

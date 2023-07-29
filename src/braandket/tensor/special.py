@@ -1,14 +1,14 @@
 import abc
 from typing import Any, Generic, Iterable, Optional, Union
 
-from braandket.backend import Backend, ValuesType, get_default_backend
+from braandket.backend import Backend, BackendValue, get_default_backend
 from braandket.space import KetSpace, NumSpace, Space
 from .tensor import QTensor
 
 
 # special tensors
 
-class NumericTensor(QTensor[ValuesType]):
+class NumericTensor(QTensor[BackendValue]):
 
     @classmethod
     def of(cls,
@@ -43,7 +43,7 @@ class NumericTensor(QTensor[ValuesType]):
         return self @ other
 
 
-class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
+class StateTensor(QTensor[BackendValue], Generic[BackendValue], abc.ABC):
     @property
     @abc.abstractmethod
     def ket_spaces(self) -> tuple[KetSpace, ...]:
@@ -82,11 +82,11 @@ class StateTensor(QTensor[ValuesType], Generic[ValuesType], abc.ABC):
     @abc.abstractmethod
     def probabilities(self,
         *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
-    ) -> ValuesType:
+    ) -> BackendValue:
         pass
 
 
-class PureStateTensor(StateTensor[ValuesType]):
+class PureStateTensor(StateTensor[BackendValue]):
 
     @classmethod
     def of(cls,
@@ -147,17 +147,17 @@ class PureStateTensor(StateTensor[ValuesType]):
 
     def amplitudes(self,
         *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
-    ) -> ValuesType:
+    ) -> BackendValue:
         return self.values(*spaces)
 
     def probabilities(self,
         *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
-    ) -> ValuesType:
+    ) -> BackendValue:
         amplitudes = self.amplitudes(*spaces)
         return self.backend.mul(self.backend.conj(amplitudes), amplitudes)
 
 
-class MixedStateTensor(StateTensor[ValuesType]):
+class MixedStateTensor(StateTensor[BackendValue]):
     @classmethod
     def of(cls,
         values: Union[QTensor, Any],
@@ -211,7 +211,7 @@ class MixedStateTensor(StateTensor[ValuesType]):
 
     def probabilities(self,
         *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
-    ) -> ValuesType:
+    ) -> BackendValue:
         bra_spaces = []
         for space_or_pair in spaces:
             if isinstance(space_or_pair, Space):
@@ -226,7 +226,7 @@ class MixedStateTensor(StateTensor[ValuesType]):
         return self.values(*spaces, *bra_spaces)
 
 
-class OperatorTensor(QTensor[ValuesType]):
+class OperatorTensor(QTensor[BackendValue]):
     @classmethod
     def of(cls,
         values: Union[QTensor, Any],
@@ -242,7 +242,7 @@ class OperatorTensor(QTensor[ValuesType]):
 
     @classmethod
     def from_matrix(cls,
-        matrix: ValuesType,
+        matrix: BackendValue,
         ket_spaces: Iterable[KetSpace] | KetSpace,
         num_spaces: Iterable[NumSpace] | NumSpace = (), *,
         backend: Optional[Backend] = None
