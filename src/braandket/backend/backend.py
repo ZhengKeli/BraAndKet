@@ -20,11 +20,11 @@ class Backend(Generic[ValuesType], abc.ABC):
     # basics
 
     @abc.abstractmethod
-    def convert(self, values: ArrayLike) -> ValuesType:
+    def convert(self, value: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def copy(self, values: ArrayLike) -> ValuesType:
+    def copy(self, value: ArrayLike) -> ValuesType:
         pass
 
     # constructors
@@ -48,88 +48,88 @@ class Backend(Generic[ValuesType], abc.ABC):
     # linear operations
 
     @abc.abstractmethod
-    def add(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
+    def add(self, value0: ArrayLike, value1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def sub(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
+    def sub(self, value0: ArrayLike, value1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def mul(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
+    def mul(self, value0: ArrayLike, value1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def div(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
+    def div(self, value0: ArrayLike, value1: ArrayLike) -> ValuesType:
         pass
 
     # non-linear operations
 
     @abc.abstractmethod
-    def pow(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
+    def pow(self, value0: ArrayLike, value1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def square(self, values: ArrayLike) -> ValuesType:
+    def square(self, value: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def sqrt(self, values: ArrayLike) -> ValuesType:
+    def sqrt(self, value: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def exp(self, values: ArrayLike) -> ValuesType:
+    def exp(self, value: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def sin(self, values: ArrayLike) -> ValuesType:
+    def sin(self, value: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def cos(self, values: ArrayLike) -> ValuesType:
+    def cos(self, value: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def conj(self, values: ArrayLike) -> ValuesType:
+    def conj(self, value: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def abs(self, values: ArrayLike) -> ValuesType:
+    def abs(self, value: ArrayLike) -> ValuesType:
         pass
 
     # tensor operations
 
     @abc.abstractmethod
-    def ensure_shape(self, values: ArrayLike, shape: Iterable[int]) -> ValuesType:
+    def ensure_shape(self, value: ArrayLike, shape: Iterable[int]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def reshape(self, values: ArrayLike, shape: Iterable[int]) -> ValuesType:
+    def reshape(self, value: ArrayLike, shape: Iterable[int]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def transpose(self, values: ArrayLike, *, axes: Iterable[int]) -> ValuesType:
+    def transpose(self, value: ArrayLike, *, axes: Iterable[int]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def expand(self, values: ArrayLike, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> ValuesType:
+    def expand(self, value: ArrayLike, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def slice(self, values: ArrayLike, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> ValuesType:
+    def slice(self, value: ArrayLike, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def trace(self, values: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
+    def trace(self, value: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def diag(self, values: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
+    def diag(self, value: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
         pass
 
     @abc.abstractmethod
     def dot(self,
-        values0: ArrayLike, values1: ArrayLike, *,
+        value0: ArrayLike, value1: ArrayLike, *,
         ndim0: int, ndim1: int,
         dot_axes: tuple[Iterable[int], Iterable[int]],
         bat_axes: tuple[Iterable[int], Iterable[int]],

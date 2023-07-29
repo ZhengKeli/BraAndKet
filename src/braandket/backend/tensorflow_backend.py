@@ -9,31 +9,31 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     # basics
 
-    def convert(self, values: Any, *, dtype=None) -> tf.Tensor:
-        values = tf.convert_to_tensor(values)
+    def convert(self, value: Any, *, dtype=None) -> tf.Tensor:
+        value = tf.convert_to_tensor(value)
         if dtype is not None:
-            values = tf.cast(values, dtype=dtype)
-        elif values.dtype in (tf.int8, tf.int16, tf.int32, tf.int64):
-            values = tf.cast(values, dtype=tf.int32)
-        elif values.dtype in (tf.float16, tf.float32, tf.float64):
-            values = tf.cast(values, dtype=tf.float32)
-        elif values.dtype in (tf.complex64, tf.complex128):
-            values = tf.cast(values, dtype=tf.complex64)
+            value = tf.cast(value, dtype=dtype)
+        elif value.dtype in (tf.int8, tf.int16, tf.int32, tf.int64):
+            value = tf.cast(value, dtype=tf.int32)
+        elif value.dtype in (tf.float16, tf.float32, tf.float64):
+            value = tf.cast(value, dtype=tf.float32)
+        elif value.dtype in (tf.complex64, tf.complex128):
+            value = tf.cast(value, dtype=tf.complex64)
         else:
-            raise TypeError(f"Unsupported dtype of values: {values.dtype}")
-        return values
+            raise TypeError(f"Unsupported dtype of value: {value.dtype}")
+        return value
 
-    def copy(self, values: tf.Tensor) -> tf.Tensor:
-        return values
+    def copy(self, value: tf.Tensor) -> tf.Tensor:
+        return value
 
-    def _auto_cast(self, values0: tf.Tensor, values1: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
+    def _auto_cast(self, value0: tf.Tensor, value1: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
         ordered_dtypes = [tf.complex64, tf.float32, tf.int32]
-        dt0 = ordered_dtypes.index(values0.dtype)
-        dt1 = ordered_dtypes.index(values1.dtype)
+        dt0 = ordered_dtypes.index(value0.dtype)
+        dt1 = ordered_dtypes.index(value1.dtype)
         dtype = ordered_dtypes[dt0] if dt0 < dt1 else ordered_dtypes[dt1]
-        values0 = tf.cast(values0, dtype=dtype)
-        values1 = tf.cast(values1, dtype=dtype)
-        return values0, values1
+        value0 = tf.cast(value0, dtype=dtype)
+        value1 = tf.cast(value1, dtype=dtype)
+        return value0, value1
 
     # constructors
 
@@ -53,93 +53,93 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     # unary operations
 
-    def pow(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
-        return tf.pow(values0, values1)
+    def pow(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
+        return tf.pow(value0, value1)
 
-    def square(self, values: tf.Tensor) -> tf.Tensor:
-        return tf.square(values)
+    def square(self, value: tf.Tensor) -> tf.Tensor:
+        return tf.square(value)
 
-    def sqrt(self, values: tf.Tensor) -> tf.Tensor:
-        return tf.sqrt(values)
+    def sqrt(self, value: tf.Tensor) -> tf.Tensor:
+        return tf.sqrt(value)
 
-    def exp(self, values: tf.Tensor) -> tf.Tensor:
-        return tf.exp(values)
+    def exp(self, value: tf.Tensor) -> tf.Tensor:
+        return tf.exp(value)
 
-    def sin(self, values: tf.Tensor) -> tf.Tensor:
-        return tf.sin(values)
+    def sin(self, value: tf.Tensor) -> tf.Tensor:
+        return tf.sin(value)
 
-    def cos(self, values: tf.Tensor) -> tf.Tensor:
-        return tf.cos(values)
+    def cos(self, value: tf.Tensor) -> tf.Tensor:
+        return tf.cos(value)
 
-    def conj(self, values: tf.Tensor) -> tf.Tensor:
-        return tf.math.conj(values)
+    def conj(self, value: tf.Tensor) -> tf.Tensor:
+        return tf.math.conj(value)
 
-    def abs(self, values: tf.Tensor) -> tf.Tensor:
-        return tf.abs(values)
+    def abs(self, value: tf.Tensor) -> tf.Tensor:
+        return tf.abs(value)
 
     # linear operations
 
-    def add(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
-        values0, values1 = self._auto_cast(values0, values1)
-        return values0 + values1
+    def add(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
+        value0, value1 = self._auto_cast(value0, value1)
+        return value0 + value1
 
-    def sub(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
-        values0, values1 = self._auto_cast(values0, values1)
-        return values0 - values1
+    def sub(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
+        value0, value1 = self._auto_cast(value0, value1)
+        return value0 - value1
 
-    def mul(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
-        values0, values1 = self._auto_cast(values0, values1)
-        return values0 * values1
+    def mul(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
+        value0, value1 = self._auto_cast(value0, value1)
+        return value0 * value1
 
-    def div(self, values0: tf.Tensor, values1: tf.Tensor) -> tf.Tensor:
-        values0, values1 = self._auto_cast(values0, values1)
-        return values0 / values1
+    def div(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
+        value0, value1 = self._auto_cast(value0, value1)
+        return value0 / value1
 
     # operator operations
 
-    def ensure_shape(self, values: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
-        return tf.ensure_shape(values, shape)
+    def ensure_shape(self, value: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
+        return tf.ensure_shape(value, shape)
 
-    def reshape(self, values: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
-        return tf.reshape(values, shape)
+    def reshape(self, value: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
+        return tf.reshape(value, shape)
 
-    def transpose(self, values: tf.Tensor, *, axes: Iterable[int]) -> tf.Tensor:
-        return tf.transpose(values, axes)
+    def transpose(self, value: tf.Tensor, *, axes: Iterable[int]) -> tf.Tensor:
+        return tf.transpose(value, axes)
 
-    def expand(self, values: tf.Tensor, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> tf.Tensor:
+    def expand(self, value: tf.Tensor, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> tf.Tensor:
         for axis in axes:
-            values = tf.expand_dims(values, axis)
+            value = tf.expand_dims(value, axis)
         if sizes is not None:
             sizes = tuple(sizes)
             for axis, size in zip(axes, sizes, strict=True):
-                values = tf.repeat(values, size, axis)
-        return values
+                value = tf.repeat(value, size, axis)
+        return value
 
-    def slice(self, values: tf.Tensor, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> tf.Tensor:
-        return values[slices]
+    def slice(self, value: tf.Tensor, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> tf.Tensor:
+        return value[slices]
 
-    def trace(self, values: tf.Tensor, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
+    def trace(self, value: tf.Tensor, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
         axis_pairs = tf.transpose(axes)  # [axes_n, 2]
         while len(axes) > 0:
             axis0, axis1 = axis_pairs[0]
-            values = tf.linalg.trace(values, axis0, axis1)
+            value = tf.linalg.trace(value, axis0, axis1)
             axis_pairs = axis_pairs[1:]
             axis_pairs = tf.where(axis_pairs > axis0, axis_pairs - 1, axis_pairs)
             axis_pairs = tf.where(axis_pairs > axis1, axis_pairs - 1, axis_pairs)
-        return values
+        return value
 
-    def diag(self, values: tf.Tensor, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
+    def diag(self, value: tf.Tensor, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
         axis_pairs = tf.transpose(axes)  # [axes_n, 2]
         while len(axes) > 0:
             axis0, axis1 = axis_pairs[0]
-            values = tf.linalg.diag(values, axis0, axis1)
+            value = tf.linalg.diag(value, axis0, axis1)
             axis_pairs = axis_pairs[1:]
             axis_pairs = tf.where(axis_pairs > axis0, axis_pairs - 1, axis_pairs)
             axis_pairs = tf.where(axis_pairs > axis1, axis_pairs - 1, axis_pairs)
-        return values
+        return value
 
     def dot(self,
-        values0: tf.Tensor, values1: tf.Tensor, *,
+        value0: tf.Tensor, value1: tf.Tensor, *,
         ndim0: int, ndim1: int,
         dot_axes: tuple[Iterable[int], Iterable[int]],
         bat_axes: tuple[Iterable[int], Iterable[int]],
@@ -156,32 +156,32 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
         selected_axes0 = {*bat_axes0, *dot_axes0}
         if len(selected_axes0) != len(bat_axes0) + len(dot_axes0):
-            raise ValueError("Found duplication for axes of values0 !")
+            raise ValueError("Found duplication for axes of value0 !")
         rem_axes0 = tuple(axis for axis in range(ndim0) if axis not in selected_axes0)
 
         selected_axes1 = {*bat_axes1, *dot_axes1}
         if len(selected_axes1) != len(bat_axes1) + len(dot_axes1):
-            raise ValueError("Found duplication for axes of values1 !")
+            raise ValueError("Found duplication for axes of value1 !")
         rem_axes1 = tuple(axis for axis in range(ndim1) if axis not in selected_axes1)
 
-        values0 = tf.transpose(values0, [*bat_axes0, *rem_axes0, *dot_axes0])
-        values1 = tf.transpose(values1, [*bat_axes1, *rem_axes1, *dot_axes1])
+        value0 = tf.transpose(value0, [*bat_axes0, *rem_axes0, *dot_axes0])
+        value1 = tf.transpose(value1, [*bat_axes1, *rem_axes1, *dot_axes1])
 
         bat_axes_n, dot_axes_n = len(bat_axes0), len(dot_axes0)
         rem_axes0_n, rem_axes1_n = len(rem_axes0), len(rem_axes1)
 
-        values0 = self.expand(values0, tuple((i + bat_axes_n + rem_axes0_n) for i in range(rem_axes1_n)))
-        values1 = self.expand(values1, tuple((i + bat_axes_n) for i in range(rem_axes0_n)))
+        value0 = self.expand(value0, tuple((i + bat_axes_n + rem_axes0_n) for i in range(rem_axes1_n)))
+        value1 = self.expand(value1, tuple((i + bat_axes_n) for i in range(rem_axes0_n)))
         # [*bat_axes, *rem_axes0, *exp_axes0, *dot_axes]
         # [*bat_axes, *exp_axes1, *rem_axes1, *dot_axes]
 
-        values = self.mul(values0, values1)
+        value = self.mul(value0, value1)
         # [*bat_axes, *rem_axes0, *rem_axes1, *dot_axes]
 
-        values = tf.reduce_sum(values, tuple((i + bat_axes_n + rem_axes0_n + rem_axes1_n) for i in range(dot_axes_n)))
+        value = tf.reduce_sum(value, tuple((i + bat_axes_n + rem_axes0_n + rem_axes1_n) for i in range(dot_axes_n)))
         # [*bat_axes, *rem_axes0, *rem_axes1]
 
-        return values, (rem_axes0, rem_axes1)
+        return value, (rem_axes0, rem_axes1)
 
     # special
 
@@ -189,9 +189,9 @@ class TensorflowBackend(Backend[tf.Tensor]):
         values = tf.stack(values, axis=-1)
         indices = tf.expand_dims(indices, axis=-1)
         indices = tf.cast(indices, tf.int32)
-        values = tf.experimental.numpy.take_along_axis(values, indices, axis=-1)
-        values = tf.squeeze(values, axis=-1)
-        return values
+        value = tf.experimental.numpy.take_along_axis(values, indices, axis=-1)
+        value = tf.squeeze(value, axis=-1)
+        return value
 
     def choose(self, probs: Iterable[tf.Tensor]) -> tf.Tensor:
         probs = tf.stack(probs, axis=-1)  # [*batch_shape, choose_n]
