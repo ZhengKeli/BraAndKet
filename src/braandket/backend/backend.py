@@ -1,7 +1,10 @@
 import abc
 from typing import Any, Generic, Iterable, Optional, TypeVar, Union
 
+import numpy as np
+
 ValuesType = TypeVar('ValuesType')
+ArrayLike = Union[ValuesType, np.ndarray, Iterable, bool, int, float, complex, Any]
 
 
 class Backend(Generic[ValuesType], abc.ABC):
@@ -17,11 +20,11 @@ class Backend(Generic[ValuesType], abc.ABC):
     # basics
 
     @abc.abstractmethod
-    def convert(self, values: Any) -> ValuesType:
+    def convert(self, values: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def copy(self, values: ValuesType) -> ValuesType:
+    def copy(self, values: ArrayLike) -> ValuesType:
         pass
 
     # constructors
@@ -45,88 +48,88 @@ class Backend(Generic[ValuesType], abc.ABC):
     # linear operations
 
     @abc.abstractmethod
-    def add(self, values0: ValuesType, values1: ValuesType) -> ValuesType:
+    def add(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def sub(self, values0: ValuesType, values1: ValuesType) -> ValuesType:
+    def sub(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def mul(self, values0: ValuesType, values1: ValuesType) -> ValuesType:
+    def mul(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def div(self, values0: ValuesType, values1: ValuesType) -> ValuesType:
+    def div(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
         pass
 
     # non-linear operations
 
     @abc.abstractmethod
-    def pow(self, values0: ValuesType, values1: ValuesType) -> ValuesType:
+    def pow(self, values0: ArrayLike, values1: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def square(self, values: ValuesType) -> ValuesType:
+    def square(self, values: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def sqrt(self, values: ValuesType) -> ValuesType:
+    def sqrt(self, values: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def exp(self, values: ValuesType) -> ValuesType:
+    def exp(self, values: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def sin(self, values: ValuesType) -> ValuesType:
+    def sin(self, values: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def cos(self, values: ValuesType) -> ValuesType:
+    def cos(self, values: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def conj(self, values: ValuesType) -> ValuesType:
+    def conj(self, values: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def abs(self, values: ValuesType) -> ValuesType:
+    def abs(self, values: ArrayLike) -> ValuesType:
         pass
 
     # tensor operations
 
     @abc.abstractmethod
-    def ensure_shape(self, values: ValuesType, shape: Iterable[int]) -> ValuesType:
+    def ensure_shape(self, values: ArrayLike, shape: Iterable[int]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def reshape(self, values: ValuesType, shape: Iterable[int]) -> ValuesType:
+    def reshape(self, values: ArrayLike, shape: Iterable[int]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def transpose(self, values: ValuesType, *, axes: Iterable[int]) -> ValuesType:
+    def transpose(self, values: ArrayLike, *, axes: Iterable[int]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def expand(self, values: ValuesType, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> ValuesType:
+    def expand(self, values: ArrayLike, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def slice(self, values: ValuesType, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> ValuesType:
+    def slice(self, values: ArrayLike, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def trace(self, values: ValuesType, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
+    def trace(self, values: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def diag(self, values: ValuesType, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
+    def diag(self, values: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> ValuesType:
         pass
 
     @abc.abstractmethod
     def dot(self,
-        values0: ValuesType, values1: ValuesType, *,
+        values0: ArrayLike, values1: ArrayLike, *,
         ndim0: int, ndim1: int,
         dot_axes: tuple[Iterable[int], Iterable[int]],
         bat_axes: tuple[Iterable[int], Iterable[int]],
@@ -136,9 +139,9 @@ class Backend(Generic[ValuesType], abc.ABC):
     # special
 
     @abc.abstractmethod
-    def take(self, values: Iterable[ValuesType], indices: ValuesType) -> ValuesType:
+    def take(self, values: Iterable[ArrayLike], indices: ArrayLike) -> ValuesType:
         pass
 
     @abc.abstractmethod
-    def choose(self, probs: Iterable[ValuesType]) -> ValuesType:
+    def choose(self, probs: Iterable[ArrayLike]) -> ValuesType:
         pass

@@ -1,18 +1,18 @@
-from typing import Any, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
 import numpy as np
 
-from .backend import Backend, ValuesType
+from .backend import ArrayLike, Backend
 
 
 class NumpyBackend(Backend[np.ndarray]):
 
     # basics
 
-    def convert(self, values: Any, *, dtype=None) -> np.ndarray:
+    def convert(self, values: ArrayLike, *, dtype=None) -> np.ndarray:
         return np.asarray(values, dtype=dtype)
 
-    def copy(self, values: np.ndarray) -> np.ndarray:
+    def copy(self, values: ArrayLike) -> np.ndarray:
         return np.copy(values)
 
     # constructors
@@ -33,58 +33,58 @@ class NumpyBackend(Backend[np.ndarray]):
 
     # unary operations
 
-    def pow(self, values0: np.ndarray, values1: np.ndarray) -> np.ndarray:
+    def pow(self, values0: ArrayLike, values1: ArrayLike) -> np.ndarray:
         return np.power(values0, values1)
 
-    def square(self, values: np.ndarray) -> np.ndarray:
+    def square(self, values: ArrayLike) -> np.ndarray:
         return np.square(values)
 
-    def sqrt(self, values: np.ndarray) -> np.ndarray:
+    def sqrt(self, values: ArrayLike) -> np.ndarray:
         return np.sqrt(values)
 
-    def exp(self, values: np.ndarray) -> np.ndarray:
+    def exp(self, values: ArrayLike) -> np.ndarray:
         return np.exp(values)
 
-    def sin(self, values: np.ndarray) -> np.ndarray:
+    def sin(self, values: ArrayLike) -> np.ndarray:
         return np.sin(values)
 
-    def cos(self, values: np.ndarray) -> np.ndarray:
+    def cos(self, values: ArrayLike) -> np.ndarray:
         return np.cos(values)
 
-    def conj(self, values: np.ndarray) -> np.ndarray:
+    def conj(self, values: ArrayLike) -> np.ndarray:
         return np.conj(values)
 
-    def abs(self, values: np.ndarray) -> np.ndarray:
+    def abs(self, values: ArrayLike) -> np.ndarray:
         return np.abs(values)
 
     # linear operations
 
-    def add(self, values0: np.ndarray, values1: np.ndarray) -> np.ndarray:
+    def add(self, values0: ArrayLike, values1: ArrayLike) -> np.ndarray:
         return values0 + values1
 
-    def sub(self, values0: np.ndarray, values1: np.ndarray) -> np.ndarray:
+    def sub(self, values0: ArrayLike, values1: ArrayLike) -> np.ndarray:
         return values0 - values1
 
-    def mul(self, values0: np.ndarray, values1: np.ndarray) -> np.ndarray:
+    def mul(self, values0: ArrayLike, values1: ArrayLike) -> np.ndarray:
         return values0 * values1
 
-    def div(self, values0: np.ndarray, values1: np.ndarray) -> np.ndarray:
+    def div(self, values0: ArrayLike, values1: ArrayLike) -> np.ndarray:
         return values0 / values1
 
     # tensor operations
 
-    def ensure_shape(self, values: np.ndarray, shape: Iterable[int]):
+    def ensure_shape(self, values: ArrayLike, shape: Iterable[int]):
         if np.shape(values) != tuple(shape):
             raise ValueError(f"Unexpected values shape! expected={shape}, actual={np.shape(values)}")
         return values
 
-    def reshape(self, values: np.ndarray, shape: Iterable[int]) -> np.ndarray:
+    def reshape(self, values: ArrayLike, shape: Iterable[int]) -> np.ndarray:
         return np.reshape(values, shape)
 
-    def transpose(self, values: np.ndarray, *, axes: Iterable[int]) -> np.ndarray:
+    def transpose(self, values: ArrayLike, *, axes: Iterable[int]) -> np.ndarray:
         return np.transpose(values, axes)
 
-    def expand(self, values: np.ndarray, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> np.ndarray:
+    def expand(self, values: ArrayLike, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> np.ndarray:
         axes = tuple(axes)
         values = np.expand_dims(values, axes)
         if sizes is not None:
@@ -93,10 +93,10 @@ class NumpyBackend(Backend[np.ndarray]):
                 values = np.repeat(values, size, axis)
         return values
 
-    def slice(self, values: np.ndarray, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> np.ndarray:
+    def slice(self, values: ArrayLike, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> np.ndarray:
         return values[slices]
 
-    def trace(self, values: np.ndarray, axes: tuple[Iterable[int], Iterable[int]]) -> np.ndarray:
+    def trace(self, values: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> np.ndarray:
         axis_pairs = np.transpose(axes)  # [axes_n, 2]
         while len(axes) > 0:
             axis0, axis1 = axis_pairs[0]
@@ -106,7 +106,7 @@ class NumpyBackend(Backend[np.ndarray]):
             axis_pairs = np.where(axis_pairs > axis1, axis_pairs - 1, axis_pairs)
         return values
 
-    def diag(self, values: np.ndarray, axes: tuple[Iterable[int], Iterable[int]]) -> np.ndarray:
+    def diag(self, values: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> np.ndarray:
         axis_pairs = np.transpose(axes)  # [axes_n, 2]
         while len(axes) > 0:
             axis0, axis1 = axis_pairs[0]
@@ -117,7 +117,7 @@ class NumpyBackend(Backend[np.ndarray]):
         return values
 
     def dot(self,
-        values0: np.ndarray, values1: np.ndarray, *,
+        values0: ArrayLike, values1: ArrayLike, *,
         ndim0: int, ndim1: int,
         dot_axes: tuple[Iterable[int], Iterable[int]],
         bat_axes: tuple[Iterable[int], Iterable[int]],
@@ -164,14 +164,14 @@ class NumpyBackend(Backend[np.ndarray]):
 
     # special
 
-    def take(self, values: Iterable[ValuesType], indices: np.ndarray) -> np.ndarray:
+    def take(self, values: Iterable[ArrayLike], indices: ArrayLike) -> np.ndarray:
         values = np.stack(values, axis=-1)
         indices = np.expand_dims(indices, axis=-1)
         values = np.take_along_axis(values, indices, axis=-1)
         values = np.squeeze(values, axis=-1)
         return values
 
-    def choose(self, probs: Iterable[ValuesType]) -> tuple[np.ndarray, np.ndarray]:
+    def choose(self, probs: Iterable[ArrayLike]) -> tuple[np.ndarray, np.ndarray]:
         probs = np.stack(probs, axis=-1)  # [batch_size, choose_n]
         probs /= np.sum(probs, axis=-1, keepdims=True)
         probs = np.abs(probs)
