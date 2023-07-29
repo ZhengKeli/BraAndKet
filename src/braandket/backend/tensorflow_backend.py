@@ -1,112 +1,114 @@
-from typing import Any, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
+import numpy as np
 import tensorflow as tf
 
-from .backend import Backend
+from .backend import ArrayLike, Backend
 
 
 class TensorflowBackend(Backend[tf.Tensor]):
 
     # basics
 
-    def convert(self, value: Any, *, dtype=None) -> tf.Tensor:
+    def convert(self, value: ArrayLike, *values: ArrayLike) -> Union[tf.Tensor, tuple[tf.Tensor, ...]]:
         value = tf.convert_to_tensor(value)
-        if dtype is not None:
-            value = tf.cast(value, dtype=dtype)
-        elif value.dtype in (tf.int8, tf.int16, tf.int32, tf.int64):
-            value = tf.cast(value, dtype=tf.int32)
-        elif value.dtype in (tf.float16, tf.float32, tf.float64):
-            value = tf.cast(value, dtype=tf.float32)
-        elif value.dtype in (tf.complex64, tf.complex128):
-            value = tf.cast(value, dtype=tf.complex64)
-        else:
-            raise TypeError(f"Unsupported dtype of value: {value.dtype}")
-        return value
+        if not values:
+            return value
 
-    def copy(self, value: tf.Tensor) -> tf.Tensor:
-        return value
+        values = tuple(tf.convert_to_tensor(v) for v in values)
+        dtype = get_compact_dtype(value.dtype, *(v.dtype for v in values))
 
-    def _auto_cast(self, value0: tf.Tensor, value1: tf.Tensor) -> tuple[tf.Tensor, tf.Tensor]:
-        ordered_dtypes = [tf.complex64, tf.float32, tf.int32]
-        dt0 = ordered_dtypes.index(value0.dtype)
-        dt1 = ordered_dtypes.index(value1.dtype)
-        dtype = ordered_dtypes[dt0] if dt0 < dt1 else ordered_dtypes[dt1]
-        value0 = tf.cast(value0, dtype=dtype)
-        value1 = tf.cast(value1, dtype=dtype)
-        return value0, value1
+        value = tf.cast(value, dtype)
+        values = tuple(tf.cast(v, dtype) for v in values)
+        return value, *values
+
+    def copy(self, values: ArrayLike) -> tf.Tensor:
+        return self.convert(values)
 
     # constructors
 
-    def zeros(self, shape: Iterable[int], *, dtype=tf.complex64) -> tf.Tensor:
+    def zeros(self, shape: Iterable[int], *, dtype=tf.float32) -> tf.Tensor:
         return tf.zeros(shape, dtype=dtype)
 
-    def ones(self, shape: Iterable[int], *, dtype=tf.complex64) -> tf.Tensor:
+    def ones(self, shape: Iterable[int], *, dtype=tf.float32) -> tf.Tensor:
         return tf.ones(shape, dtype=dtype)
 
-    def onehot(self, index: int, size: int, *, dtype=tf.complex64) -> tf.Tensor:
+    def onehot(self, index: int, size: int, *, dtype=tf.float32) -> tf.Tensor:
         one_value = tf.ones((), dtype=dtype)
         zero_value = tf.zeros((), dtype=dtype)
         return tf.one_hot(index, size, on_value=one_value, off_value=zero_value)
 
-    def eye(self, size: int, *, dtype=tf.complex64) -> tf.Tensor:
+    def eye(self, size: int, *, dtype=tf.float32) -> tf.Tensor:
         return tf.eye(size, dtype=dtype)
 
     # unary operations
 
-    def pow(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
+    def pow(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
+        value0, value1 = self.convert(value0, value1)
         return tf.pow(value0, value1)
 
-    def square(self, value: tf.Tensor) -> tf.Tensor:
+    def square(self, value: ArrayLike) -> tf.Tensor:
+        value = self.convert(value)
         return tf.square(value)
 
-    def sqrt(self, value: tf.Tensor) -> tf.Tensor:
+    def sqrt(self, value: ArrayLike) -> tf.Tensor:
+        value = self.convert(value)
         return tf.sqrt(value)
 
-    def exp(self, value: tf.Tensor) -> tf.Tensor:
+    def exp(self, value: ArrayLike) -> tf.Tensor:
+        value = self.convert(value)
         return tf.exp(value)
 
-    def sin(self, value: tf.Tensor) -> tf.Tensor:
+    def sin(self, value: ArrayLike) -> tf.Tensor:
+        value = self.convert(value)
         return tf.sin(value)
 
-    def cos(self, value: tf.Tensor) -> tf.Tensor:
+    def cos(self, value: ArrayLike) -> tf.Tensor:
+        value = self.convert(value)
         return tf.cos(value)
 
-    def conj(self, value: tf.Tensor) -> tf.Tensor:
+    def conj(self, value: ArrayLike) -> tf.Tensor:
+        value = self.convert(value)
         return tf.math.conj(value)
 
-    def abs(self, value: tf.Tensor) -> tf.Tensor:
+    def abs(self, value: ArrayLike) -> tf.Tensor:
+        value = self.convert(value)
         return tf.abs(value)
 
     # linear operations
 
-    def add(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
-        value0, value1 = self._auto_cast(value0, value1)
+    def add(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
+        value0, value1 = self.convert(value0, value1)
         return value0 + value1
 
-    def sub(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
-        value0, value1 = self._auto_cast(value0, value1)
+    def sub(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
+        value0, value1 = self.convert(value0, value1)
         return value0 - value1
 
-    def mul(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
-        value0, value1 = self._auto_cast(value0, value1)
+    def mul(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
+        value0, value1 = self.convert(value0, value1)
         return value0 * value1
 
-    def div(self, value0: tf.Tensor, value1: tf.Tensor) -> tf.Tensor:
-        value0, value1 = self._auto_cast(value0, value1)
+    def div(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
+        value0, value1 = self.convert(value0, value1)
         return value0 / value1
 
     # operator operations
 
-    def ensure_shape(self, value: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
+    def ensure_shape(self, value: ArrayLike, shape: Iterable[int]) -> tf.Tensor:
+        value = self.convert(value)
         return tf.ensure_shape(value, shape)
 
-    def reshape(self, value: tf.Tensor, shape: Iterable[int]) -> tf.Tensor:
+    def reshape(self, value: ArrayLike, shape: Iterable[int]) -> tf.Tensor:
+        value = self.convert(value)
         return tf.reshape(value, shape)
 
-    def transpose(self, value: tf.Tensor, *, axes: Iterable[int]) -> tf.Tensor:
+    def transpose(self, value: ArrayLike, *, axes: Iterable[int]) -> tf.Tensor:
+        value = self.convert(value)
         return tf.transpose(value, axes)
 
-    def expand(self, value: tf.Tensor, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> tf.Tensor:
+    def expand(self, value: ArrayLike, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> tf.Tensor:
+        value = self.convert(value)
         for axis in axes:
             value = tf.expand_dims(value, axis)
         if sizes is not None:
@@ -115,10 +117,12 @@ class TensorflowBackend(Backend[tf.Tensor]):
                 value = tf.repeat(value, size, axis)
         return value
 
-    def slice(self, value: tf.Tensor, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> tf.Tensor:
+    def slice(self, value: ArrayLike, *, slices: Union[int, slice, Iterable[Union[int, slice]]]) -> tf.Tensor:
+        value = self.convert(value)
         return value[slices]
 
-    def trace(self, value: tf.Tensor, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
+    def trace(self, value: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
+        value = self.convert(value)
         axis_pairs = tf.transpose(axes)  # [axes_n, 2]
         while len(axes) > 0:
             axis0, axis1 = axis_pairs[0]
@@ -128,7 +132,8 @@ class TensorflowBackend(Backend[tf.Tensor]):
             axis_pairs = tf.where(axis_pairs > axis1, axis_pairs - 1, axis_pairs)
         return value
 
-    def diag(self, value: tf.Tensor, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
+    def diag(self, value: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
+        value = self.convert(value)
         axis_pairs = tf.transpose(axes)  # [axes_n, 2]
         while len(axes) > 0:
             axis0, axis1 = axis_pairs[0]
@@ -139,11 +144,13 @@ class TensorflowBackend(Backend[tf.Tensor]):
         return value
 
     def dot(self,
-        value0: tf.Tensor, value1: tf.Tensor, *,
+        value0: ArrayLike, value1: ArrayLike, *,
         ndim0: int, ndim1: int,
         dot_axes: tuple[Iterable[int], Iterable[int]],
         bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[tf.Tensor, tuple[tuple[int, ...], tuple[int, ...]]]:
+        value0, value1 = self.convert(value0, value1)
+
         bat_axes0, bat_axes1 = tuple(bat_axes[0]), tuple(bat_axes[1])
         if not len(bat_axes0) == len(bat_axes1):
             raise ValueError("len(bat_axes[0]) != len(bat_axes[1])")
@@ -185,7 +192,8 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     # special
 
-    def take(self, values: Iterable[tf.Tensor], indices: tf.Tensor) -> tf.Tensor:
+    def take(self, values: Iterable[ArrayLike], indices: ArrayLike) -> tf.Tensor:
+        values = self.convert(values) if isinstance(values, (np.ndarray, tf.Tensor)) else self.convert(*values)
         values = tf.stack(values, axis=-1)
         indices = tf.expand_dims(indices, axis=-1)
         indices = tf.cast(indices, tf.int32)
@@ -193,7 +201,8 @@ class TensorflowBackend(Backend[tf.Tensor]):
         value = tf.squeeze(value, axis=-1)
         return value
 
-    def choose(self, probs: Iterable[tf.Tensor]) -> tf.Tensor:
+    def choose(self, probs: Iterable[ArrayLike]) -> tf.Tensor:
+        probs = self.convert(probs) if isinstance(probs, (np.ndarray, tf.Tensor)) else self.convert(*probs)
         probs = tf.stack(probs, axis=-1)  # [*batch_shape, choose_n]
         batch_shape = tf.shape(probs)[:-1]
         batch_size = tf.reduce_prod(batch_shape)
@@ -207,3 +216,30 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
 
 tensorflow_backend = TensorflowBackend()
+
+# utils
+
+_grouped_dtypes = (
+    (tf.bool,),
+    (None, tf.int8, tf.int16, tf.int32, tf.int64),
+    (None, None, tf.float16, tf.float32, tf.float64),
+    (None, None, None, tf.complex64, tf.complex128))
+
+_supported_dtypes = tuple(dt for gp in _grouped_dtypes for dt in gp if dt is not None)
+
+
+def get_dtype_indices(dtype: tf.DType) -> tuple[int, int]:
+    for group_i, group in enumerate(_grouped_dtypes):
+        for item_i, dt in enumerate(group):
+            if dtype == dt:
+                return group_i, item_i
+    raise TypeError(f"Unsupported dtype {dtype}! Supported dtypes {','.join(map(repr, _supported_dtypes))}")
+
+
+def get_compact_dtype(dtype0: tf.DType, *dtypes: tf.DType) -> tf.DType:
+    group_i, item_i = get_dtype_indices(dtype0)
+    for dt in dtypes:
+        gi, ii = get_dtype_indices(dt)
+        group_i = max(group_i, gi)
+        item_i = max(item_i, ii)
+    return _grouped_dtypes[group_i][item_i]
