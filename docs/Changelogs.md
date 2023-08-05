@@ -1,3 +1,16 @@
+# v0.8.4
+
+Breaking changes:
+
+* Renamed `ValuesType` to `BackendValue`.
+* (For custom backend) All `Backend` operations should automatically convert arguments.
+
+Improvements:
+
+* Optimized dtype converting in `TensorflowBackend`.
+* All `Backend` operations now automatically convert arguments.
+* renamed variables in `Backend`: "values" to "value".
+
 # v0.8.3
 
 Improvements:
