@@ -154,7 +154,9 @@ class PureStateTensor(StateTensor[BackendValue]):
         *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
     ) -> BackendValue:
         amplitudes = self.amplitudes(*spaces)
-        return self.backend.mul(self.backend.conj(amplitudes), amplitudes)
+        probs = self.backend.mul(self.backend.conj(amplitudes), amplitudes)
+        probs = self.backend.abs(probs)
+        return probs
 
 
 class MixedStateTensor(StateTensor[BackendValue]):
