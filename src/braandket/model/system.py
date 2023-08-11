@@ -91,6 +91,14 @@ class QSystem(abc.ABC):
 
         return QComposed(*components)
 
+    # str & repr
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"<{type(self).__name__} name={self.name}>"
+
 
 class QParticle(QSystem):
     def __init__(self, space: KetSpace, state_tensor: StateTensor):
