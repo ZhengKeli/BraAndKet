@@ -1,7 +1,7 @@
 import abc
 from typing import Any, Generic, Iterable, Optional, Union, overload
 
-from braandket.backend import Backend, BackendValue, get_default_backend
+from braandket.backend import BackendValue, get_default_backend
 from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
 from .tensor import QTensor
 
@@ -13,24 +13,23 @@ class NumericTensor(QTensor[BackendValue]):
     @classmethod
     def of(cls,
         values: Union[QTensor, Any],
-        spaces: Optional[Iterable[Space]] = None, *,
-        backend: Optional[Backend] = None
+        spaces: Optional[Iterable[Space]] = None,
     ) -> 'NumericTensor':
         if isinstance(values, NumericTensor):
             return values
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
-            return cls(values._values, values._spaces, values._backend)
+            return cls(values._values, values._spaces)
         if spaces is None:
             spaces = ()
-        return cls(values, spaces, backend or get_default_backend())
+        return cls(values, spaces)
 
-    def __init__(self, values: Any, spaces: Iterable[Space], backend: Backend):
+    def __init__(self, values: Any, spaces: Iterable[Space]):
         spaces = tuple(spaces)
         for space in spaces:
             if not isinstance(space, NumSpace):
                 raise TypeError(f"NumTensor accepts only NumSpace, got {space}!")
-        super().__init__(values, spaces, backend)
+        super().__init__(values, spaces)
 
     @property
     def spaces(self) -> tuple[NumSpace, ...]:
@@ -142,22 +141,21 @@ class PureStateTensor(StateTensor[BackendValue]):
     @classmethod
     def of(cls,
         values: Union[QTensor, Any],
-        spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None, *,
-        backend: Optional[Backend] = None
+        spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None,
     ) -> 'PureStateTensor':
         if isinstance(values, PureStateTensor):
             return values
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
-            return cls(values._values, values._spaces, values._backend)
-        return cls(values, spaces, backend or get_default_backend())
+            return cls(values._values, values._spaces)
+        return cls(values, spaces)
 
-    def __init__(self, values: Any, spaces: Iterable[Union[NumSpace, KetSpace]], backend: Backend):
+    def __init__(self, values: Any, spaces: Iterable[Union[NumSpace, KetSpace]]):
         spaces = tuple(spaces)
         for space in spaces:
             if not isinstance(space, (NumSpace, KetSpace)):
                 raise TypeError(f"PureStateTensor accepts only KetSpace and NumSpace, got {space}!")
-        super().__init__(values, spaces, backend)
+        super().__init__(values, spaces)
         self._ket_spaces = tuple(space for space in spaces if isinstance(space, KetSpace))
 
     @property
@@ -239,8 +237,7 @@ class MixedStateTensor(StateTensor[BackendValue]):
     @classmethod
     def of(cls,
         values: Union[QTensor, Any],
-        spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None, *,
-        backend: Optional[Backend] = None
+        spaces: Optional[Iterable[Union[NumSpace, KetSpace]]] = None,
     ) -> 'MixedStateTensor':
         if isinstance(values, MixedStateTensor):
             return values
@@ -248,13 +245,13 @@ class MixedStateTensor(StateTensor[BackendValue]):
             return cls.of(values @ values.ct)
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
-            return cls(values._values, values._spaces, values._backend)
-        return cls(values, spaces, backend or get_default_backend())
+            return cls(values._values, values._spaces)
+        return cls(values, spaces)
 
-    def __init__(self, values: Any, spaces: Iterable[Space], backend: Backend):
+    def __init__(self, values: Any, spaces: Iterable[Space]):
         spaces = tuple(spaces)
         ket_spaces = _match_spaces_pairs(spaces)
-        super().__init__(values, spaces, backend)
+        super().__init__(values, spaces)
         self._ket_spaces = ket_spaces
 
     @property
@@ -357,36 +354,33 @@ class OperatorTensor(QTensor[BackendValue]):
     @classmethod
     def of(cls,
         values: Union[QTensor, Any],
-        spaces: Optional[Iterable[Space]] = None, *,
-        backend: Optional[Backend] = None
+        spaces: Optional[Iterable[Space]] = None,
     ) -> 'OperatorTensor':
         if isinstance(values, OperatorTensor):
             return values
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
-            return cls(values._values, values._spaces, values._backend)
-        return cls(values, spaces, backend or get_default_backend())
+            return cls(values._values, values._spaces)
+        return cls(values, spaces)
 
     @classmethod
     def from_matrix(cls,
         matrix: BackendValue,
         ket_spaces: Union[Iterable[KetSpace], KetSpace],
-        num_spaces: Union[Iterable[NumSpace], NumSpace] = (), *,
-        backend: Optional[Backend] = None
+        num_spaces: Union[Iterable[NumSpace], NumSpace] = (),
     ) -> 'OperatorTensor':
         num_spaces = (num_spaces,) if isinstance(num_spaces, NumSpace) else tuple(num_spaces)
         ket_spaces = (ket_spaces,) if isinstance(ket_spaces, KetSpace) else tuple(ket_spaces)
         bra_spaces = tuple(space.ct for space in ket_spaces)
         spaces = num_spaces + ket_spaces + bra_spaces
-        backend = backend or get_default_backend()
         shape = tuple(space.n for space in spaces)
-        values = backend.reshape(matrix, shape)
-        return cls(values, spaces, backend)
+        values = get_default_backend().reshape(matrix, shape)
+        return cls(values, spaces)
 
-    def __init__(self, values: Any, spaces: Iterable[Space], backend: Backend):
+    def __init__(self, values: Any, spaces: Iterable[Space]):
         spaces = tuple(spaces)
         ket_spaces = _match_spaces_pairs(spaces)
-        super().__init__(values, spaces, backend)
+        super().__init__(values, spaces)
         self._ket_spaces = ket_spaces
 
     @property

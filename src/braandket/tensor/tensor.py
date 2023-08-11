@@ -9,34 +9,35 @@ from braandket.utils import iter_structure
 class QTensor(Generic[BackendValue], abc.ABC):
 
     @classmethod
-    def of(cls, values: Any, spaces: Iterable[Space], *, backend: Optional[Backend] = None) -> 'QTensor':
-        if backend is None:
-            backend = get_default_backend()
+    def of(cls, values: Any, spaces: Iterable[Space]) -> 'QTensor':
         spaces = tuple(spaces)
 
         try:
             from braandket import NumericTensor
             # noinspection PyTypeChecker
-            return NumericTensor(values, spaces, backend)
+            return NumericTensor(values, spaces)
         except TypeError:
             pass
 
         try:
             from .special import PureStateTensor
             # noinspection PyTypeChecker
-            return PureStateTensor(values, spaces, backend)
+            return PureStateTensor(values, spaces)
         except TypeError:
             pass
 
-        return QTensor(values, spaces, backend)
+        return QTensor(values, spaces)
 
-    def __init__(self, values: Any, spaces: Iterable[Space], backend: Backend):
+    def __init__(self, values: Any, spaces: Iterable[Space]):
         # check spaces
         spaces = tuple(spaces)
         for i in range(len(spaces)):
             for j in range(i + 1, len(spaces)):
                 if spaces[i] == spaces[j]:
                     raise ValueError(f"Found duplicated spaces when constructing QTensor: {spaces[i]}")
+
+        # get backend
+        backend = get_default_backend()
 
         # check values
         values = backend.convert(values)

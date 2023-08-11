@@ -57,21 +57,21 @@ class KetSpace(HSpace):
 
     # tensor constructors
 
-    def eigenstate(self, index: int, *, backend: Optional[Backend] = None):
+    def eigenstate(self, index: int):
         from braandket.tensor import eigenstate
-        return eigenstate(self, index, backend=backend)
+        return eigenstate(self, index)
 
-    def operator(self, ket_index: int, bra_index: int, *, backend: Optional[Backend] = None):
+    def operator(self, ket_index: int, bra_index: int):
         from braandket.tensor import operator
-        return operator(self, ket_index, bra_index, backend=backend)
+        return operator(self, ket_index, bra_index)
 
-    def projector(self, index: int, *, backend: Optional[Backend] = None):
+    def projector(self, index: int):
         from braandket.tensor import projector
-        return projector(self, index, backend=backend)
+        return projector(self, index)
 
-    def identity(self, *, backend: Optional[Backend] = None):
+    def identity(self):
         from braandket.tensor import identity
-        return identity(self, backend=backend)
+        return identity(self)
 
 
 class BraSpace(HSpace):

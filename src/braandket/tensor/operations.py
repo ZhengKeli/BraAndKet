@@ -1,5 +1,5 @@
 import math
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Iterable, Union
 
 from braandket.backend import Backend, BackendValue, get_default_backend
 from braandket.space import HSpace, KetSpace, NumSpace, Space
@@ -14,70 +14,70 @@ pi = math.pi
 
 # constructors
 
-def zero(*, backend: Optional[Backend] = None) -> NumericTensor:
-    return NumericTensor.of(0, (), backend=backend)
+def zero() -> NumericTensor:
+    return NumericTensor.of(0, ())
 
 
-def one(*, backend: Optional[Backend] = None) -> NumericTensor:
-    return NumericTensor.of(1, (), backend=backend)
+def one() -> NumericTensor:
+    return NumericTensor.of(1, ())
 
 
-def zeros(space: NumSpace, *, backend: Optional[Backend] = None) -> NumericTensor:
-    backend = backend or get_default_backend()
+def zeros(space: NumSpace) -> NumericTensor:
+    backend = get_default_backend()
     values = backend.zeros((space.n,))
-    return NumericTensor(values, (space,), backend)
+    return NumericTensor(values, (space,))
 
 
-def ones(space: NumSpace, *, backend: Optional[Backend] = None) -> NumericTensor:
-    backend = backend or get_default_backend()
+def ones(space: NumSpace) -> NumericTensor:
+    backend = get_default_backend()
     values = backend.ones((space.n,))
-    return NumericTensor(values, (space,), backend)
+    return NumericTensor(values, (space,))
 
 
-def eigenstate(space: KetSpace, index: int, *, backend: Optional[Backend] = None) -> PureStateTensor:
-    backend = backend or get_default_backend()
+def eigenstate(space: KetSpace, index: int) -> PureStateTensor:
+    backend = get_default_backend()
     values = backend.onehot(index, space.n)
-    return PureStateTensor(values, (space,), backend)
+    return PureStateTensor(values, (space,))
 
 
-def operator(space: KetSpace, ket_index: int, bra_index: int, *, backend: Optional[Backend] = None) -> OperatorTensor:
-    ket_vector = eigenstate(space, ket_index, backend=backend)
-    bra_vector = eigenstate(space, bra_index, backend=backend).ct
+def operator(space: KetSpace, ket_index: int, bra_index: int) -> OperatorTensor:
+    ket_vector = eigenstate(space, ket_index)
+    bra_vector = eigenstate(space, bra_index).ct
     return OperatorTensor.of(ket_vector @ bra_vector)
 
 
-def projector(space: KetSpace, index: int, *, backend: Optional[Backend] = None) -> OperatorTensor:
-    return operator(space, index, index, backend=backend)
+def projector(space: KetSpace, index: int) -> OperatorTensor:
+    return operator(space, index, index)
 
 
-def identity(space: KetSpace, *, backend: Optional[Backend] = None) -> OperatorTensor:
-    backend = backend or get_default_backend()
+def identity(space: KetSpace) -> OperatorTensor:
+    backend = get_default_backend()
     values = backend.eye(space.n)
-    return OperatorTensor(values, (space, space.ct), backend)
+    return OperatorTensor(values, (space, space.ct))
 
 
 # prod & sum
 
-def prod(*items: QTensor, backend: Optional[Backend] = None) -> QTensor:
+def prod(*items: QTensor) -> QTensor:
     if len(items) == 0:
-        return one(backend=backend)
+        return one()
     x = items[0]
     for item in items[1:]:
         x = x @ item
     return x
 
 
-def sum(*items: QTensor, backend: Optional[Backend] = None) -> QTensor:
+def sum(*items: QTensor) -> QTensor:
     if len(items) == 0:
-        return zero(backend=backend)
+        return zero()
     x = items[0]
     for item in items[1:]:
         x = x + item
     return x
 
 
-def sum_ct(*items, backend: Optional[Backend] = None) -> QTensor:
-    s = sum(*items, backend=backend)
+def sum_ct(*items: QTensor) -> QTensor:
+    s = sum(*items)
     return s + s.ct
 
 
@@ -134,7 +134,8 @@ def _broadcast_h_spaces(tensor0: QTensor, tensor1: QTensor) -> tuple[QTensor, QT
 
 
 def _expand_with_identities(tensor: OperatorTensor, *spaces: KetSpace):
-    return prod(tensor, *(space.identity(backend=tensor.backend) for space in spaces))
+    with tensor.backend:
+        return prod(tensor, *(space.identity() for space in spaces))
 
 
 # numeric
