@@ -1,5 +1,4 @@
 from .backend import *
-from .model import *
 from .space import *
 from .tensor import *
 
