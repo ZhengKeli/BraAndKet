@@ -1,4 +1,4 @@
-from .backend import Backend, BackendValue
+from .backend import ArrayLike, Backend, BackendValue
 from .default import get_default_backend, set_default_backend
 
 try:
