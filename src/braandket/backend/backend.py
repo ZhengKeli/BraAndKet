@@ -24,6 +24,10 @@ class Backend(Generic[BackendValue], abc.ABC):
         pass
 
     @abc.abstractmethod
+    def compact(self, *values: ArrayLike) -> tuple[BackendValue, ...]:
+        pass
+
+    @abc.abstractmethod
     def copy(self, value: ArrayLike) -> BackendValue:
         pass
 

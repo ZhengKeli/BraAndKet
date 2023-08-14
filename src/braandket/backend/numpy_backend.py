@@ -12,6 +12,9 @@ class NumpyBackend(Backend[np.ndarray]):
     def convert(self, value: ArrayLike, *, dtype=None) -> np.ndarray:
         return np.asarray(value, dtype=dtype)
 
+    def compact(self, *values: ArrayLike) -> tuple[np.ndarray, ...]:
+        return tuple(self.convert(value) for value in values)
+
     def copy(self, value: ArrayLike) -> np.ndarray:
         return np.copy(value)
 

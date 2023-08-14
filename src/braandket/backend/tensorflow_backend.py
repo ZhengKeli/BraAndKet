@@ -10,17 +10,26 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     # basics
 
-    def convert(self, value: ArrayLike, *values: ArrayLike) -> Union[tf.Tensor, tuple[tf.Tensor, ...]]:
-        value = tf.convert_to_tensor(value)
-        if not values:
-            return value
+    def convert(self, value: ArrayLike, *, dtype: Optional[tf.DType] = None) -> tf.Tensor:
+        if dtype is None:
+            if isinstance(value, int):
+                dtype = tf.int32
+            if isinstance(value, float):
+                dtype = tf.float32
+            if isinstance(value, complex):
+                dtype = tf.complex64
+        return tf.convert_to_tensor(value, dtype=dtype)
 
-        values = tuple(tf.convert_to_tensor(v) for v in values)
-        dtype = get_compact_dtype(value.dtype, *(v.dtype for v in values))
+    def compact(self, *values: ArrayLike) -> tuple[tf.Tensor, ...]:
+        if len(values) == 0:
+            return ()
 
-        value = tf.cast(value, dtype)
-        values = tuple(tf.cast(v, dtype) for v in values)
-        return value, *values
+        values = tuple(self.convert(value) for value in values)
+        if len(values) == 1:
+            return values
+
+        dtype = get_compact_dtype(*(value.dtype for value in values))
+        return tuple(tf.cast(value, dtype) for value in values)
 
     def copy(self, values: ArrayLike) -> tf.Tensor:
         return self.convert(values)
@@ -44,7 +53,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
     # unary operations
 
     def pow(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
-        value0, value1 = self.convert(value0, value1)
+        value0, value1 = self.compact(value0, value1)
         return tf.pow(value0, value1)
 
     def square(self, value: ArrayLike) -> tf.Tensor:
@@ -78,19 +87,19 @@ class TensorflowBackend(Backend[tf.Tensor]):
     # linear operations
 
     def add(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
-        value0, value1 = self.convert(value0, value1)
+        value0, value1 = self.compact(value0, value1)
         return value0 + value1
 
     def sub(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
-        value0, value1 = self.convert(value0, value1)
+        value0, value1 = self.compact(value0, value1)
         return value0 - value1
 
     def mul(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
-        value0, value1 = self.convert(value0, value1)
+        value0, value1 = self.compact(value0, value1)
         return value0 * value1
 
     def div(self, value0: ArrayLike, value1: ArrayLike) -> tf.Tensor:
-        value0, value1 = self.convert(value0, value1)
+        value0, value1 = self.compact(value0, value1)
         return value0 / value1
 
     # operator operations
@@ -149,7 +158,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
         dot_axes: tuple[Iterable[int], Iterable[int]],
         bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[tf.Tensor, tuple[tuple[int, ...], tuple[int, ...]]]:
-        value0, value1 = self.convert(value0, value1)
+        value0, value1 = self.compact(value0, value1)
 
         bat_axes0, bat_axes1 = tuple(bat_axes[0]), tuple(bat_axes[1])
         if not len(bat_axes0) == len(bat_axes1):
@@ -193,8 +202,11 @@ class TensorflowBackend(Backend[tf.Tensor]):
     # special
 
     def take(self, values: Iterable[ArrayLike], indices: ArrayLike) -> tf.Tensor:
-        values = self.convert(values) if isinstance(values, (np.ndarray, tf.Tensor)) else self.convert(*values)
-        values = tf.stack(values, axis=-1)
+        if isinstance(values, (np.ndarray, tf.Tensor)):
+            values = self.convert(values)
+        else:
+            values = self.compact(*values)
+            values = tf.stack(values, axis=-1)
         indices = tf.expand_dims(indices, axis=-1)
         indices = tf.cast(indices, tf.int32)
         value = tf.experimental.numpy.take_along_axis(values, indices, axis=-1)
@@ -202,7 +214,11 @@ class TensorflowBackend(Backend[tf.Tensor]):
         return value
 
     def choose(self, probs: Iterable[ArrayLike]) -> tf.Tensor:
-        probs = self.convert(probs) if isinstance(probs, (np.ndarray, tf.Tensor)) else self.convert(*probs)
+        if isinstance(probs, (np.ndarray, tf.Tensor)):
+            probs = self.convert(probs)
+        else:
+            probs = self.compact(*probs)
+            probs = tf.stack(probs, axis=-1)
         probs = tf.stack(probs, axis=-1)  # [*batch_shape, choose_n]
         batch_shape = tf.shape(probs)[:-1]
         batch_size = tf.reduce_prod(batch_shape)
