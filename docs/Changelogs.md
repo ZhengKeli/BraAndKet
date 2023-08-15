@@ -1,3 +1,25 @@
+# v0.8.5
+
+Breaking changes:
+
+* Removed subpackage `braandket.model`. It will be maintained in braandket-circuit.
+* Deleted 4 methods in `QTensor`:
+    * `as_numeric_tensor()`
+    * `as_pure_state_tensor()`
+    * `as_mixed_state_tensor()`
+    * `as_operator_tensor()`
+
+Bug fixes:
+
+* Fixed critical bugs in `Backend.trace()` and `Backend.diag()`.
+* Fixed critical bug in `MixedStateTensor.trace()`.
+
+Improvements:
+
+* Exposed `ArrayLike`.
+* Added `Backend.compact()`.
+* Added auto-converting of `PureStateTensor` in `MixedStateTensor.of()`.
+
 # v0.8.4
 
 Breaking changes:
