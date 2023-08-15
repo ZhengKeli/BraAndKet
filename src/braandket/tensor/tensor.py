@@ -287,24 +287,6 @@ class QTensor(Generic[BackendValue], abc.ABC):
         new_values = self.backend.conj(self._values)
         return self.spawn(new_values, new_spaces)
 
-    # specialize
-
-    def as_numeric_tensor(self):
-        from braandket import NumericTensor
-        return NumericTensor.of(self)
-
-    def as_pure_state_tensor(self):
-        from .special import PureStateTensor
-        return PureStateTensor.of(self)
-
-    def as_mixed_state_tensor(self):
-        from .special import MixedStateTensor
-        return MixedStateTensor.of(self)
-
-    def as_operator_tensor(self):
-        from .special import OperatorTensor
-        return OperatorTensor.of(self)
-
     # inflate & flatten
 
     @classmethod
