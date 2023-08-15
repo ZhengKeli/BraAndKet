@@ -132,24 +132,24 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     def trace(self, value: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
         value = self.convert(value)
-        axis_pairs = tf.transpose(axes)  # [axes_n, 2]
-        while len(axes) > 0:
-            axis0, axis1 = axis_pairs[0]
-            value = tf.linalg.trace(value, axis0, axis1)
+        axis_pairs = np.asarray(tuple(zip(*axes)), dtype=int)  # [axes_n, 2]
+        while len(axis_pairs) > 0:
+            axis1, axis2 = axis_pairs[0]
+            value = tf.experimental.numpy.trace(value, axis1=axis1, axis2=axis2)
             axis_pairs = axis_pairs[1:]
-            axis_pairs = tf.where(axis_pairs > axis0, axis_pairs - 1, axis_pairs)
             axis_pairs = tf.where(axis_pairs > axis1, axis_pairs - 1, axis_pairs)
+            axis_pairs = tf.where(axis_pairs > axis2, axis_pairs - 1, axis_pairs)
         return value
 
     def diag(self, value: ArrayLike, axes: tuple[Iterable[int], Iterable[int]]) -> tf.Tensor:
         value = self.convert(value)
-        axis_pairs = tf.transpose(axes)  # [axes_n, 2]
-        while len(axes) > 0:
-            axis0, axis1 = axis_pairs[0]
-            value = tf.linalg.diag(value, axis0, axis1)
+        axis_pairs = np.asarray(tuple(zip(*axes)), dtype=int)  # [axes_n, 2]
+        while len(axis_pairs) > 0:
+            axis1, axis2 = axis_pairs[0]
+            value = tf.experimental.numpy.diagonal(value, axis1=axis2, axis2=axis2)
             axis_pairs = axis_pairs[1:]
-            axis_pairs = tf.where(axis_pairs > axis0, axis_pairs - 1, axis_pairs)
-            axis_pairs = tf.where(axis_pairs > axis1, axis_pairs - 1, axis_pairs)
+            axis_pairs = np.where(axis_pairs > axis1, axis_pairs - 1, axis_pairs)
+            axis_pairs = np.where(axis_pairs > axis2, axis_pairs - 1, axis_pairs)
         return value
 
     def dot(self,
