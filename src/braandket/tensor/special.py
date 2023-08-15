@@ -166,6 +166,8 @@ class MixedStateTensor(StateTensor[BackendValue]):
     ) -> 'MixedStateTensor':
         if isinstance(values, MixedStateTensor):
             return values
+        if isinstance(values, PureStateTensor):
+            return cls.of(values @ values.ct)
         if isinstance(values, QTensor):
             # noinspection PyTypeChecker
             return cls(values._values, values._spaces, values._backend)
