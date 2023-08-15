@@ -2,7 +2,7 @@ import abc
 from typing import Any, Generic, Iterable, Optional, Union
 
 from braandket.backend import Backend, BackendValue, get_default_backend
-from braandket.space import KetSpace, NumSpace, Space
+from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
 from .tensor import QTensor
 
 
@@ -205,9 +205,26 @@ class MixedStateTensor(StateTensor[BackendValue]):
         return MixedStateTensor.of(self[ket_indices + bra_indices])
 
     def trace(self, *spaces: KetSpace) -> 'MixedStateTensor':
-        values, spaces = self.values_and_slices(*spaces)
-        ket_axes, bra_axes = _index_spaces_pairs(spaces)
-        return self.backend.trace(values, (ket_axes, bra_axes))
+        if any(not isinstance(space, KetSpace) for space in spaces):
+            raise TypeError(f"trace only accepts KetSpace, got {spaces}!")
+
+        ket_axes = tuple(self.spaces.index(space) for space in spaces)
+        bra_axes = tuple(self.spaces.index(space.ct) for space in spaces)
+        new_value = self.backend.trace(self._values, (ket_axes, bra_axes))
+
+        new_spaces = []
+        spaces_set = set(spaces)
+        for space in self.spaces:
+            if not isinstance(space, HSpace):
+                new_spaces.append(space)
+            if isinstance(space, KetSpace):
+                if space not in spaces_set:
+                    new_spaces.append(space)
+            if isinstance(space, BraSpace):
+                if space.ct not in spaces_set:
+                    new_spaces.append(space)
+
+        return MixedStateTensor(new_value, new_spaces, backend=self.backend)
 
     def probabilities(self,
         *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
