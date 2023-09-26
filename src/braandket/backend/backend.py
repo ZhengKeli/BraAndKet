@@ -139,13 +139,3 @@ class Backend(Generic[BackendValue], abc.ABC):
         bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[BackendValue, tuple[tuple[int, ...], tuple[int, ...]]]:
         pass
-
-    # special
-
-    @abc.abstractmethod
-    def take(self, values: Iterable[ArrayLike], indices: ArrayLike) -> BackendValue:
-        pass
-
-    @abc.abstractmethod
-    def choose(self, probs: Iterable[ArrayLike]) -> BackendValue:
-        pass

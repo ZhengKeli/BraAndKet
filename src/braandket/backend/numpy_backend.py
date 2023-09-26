@@ -165,21 +165,5 @@ class NumpyBackend(Backend[np.ndarray]):
 
         return value, (rem_axes0, rem_axes1)
 
-    # special
-
-    def take(self, values: Iterable[ArrayLike], indices: ArrayLike) -> np.ndarray:
-        values = np.stack(values, axis=-1)
-        indices = np.expand_dims(indices, axis=-1)
-        value = np.take_along_axis(values, indices, axis=-1)
-        value = np.squeeze(value, axis=-1)
-        return value
-
-    def choose(self, probs: Iterable[ArrayLike]) -> tuple[np.ndarray, np.ndarray]:
-        probs = np.stack(probs, axis=-1)  # [batch_size, choose_n]
-        probs /= np.sum(probs, axis=-1, keepdims=True)
-        probs = np.abs(probs)
-        choice = np.apply_along_axis(lambda p: np.random.choice(len(p), p=p), axis=-1, arr=probs)  # [batch_size]
-        return choice
-
 
 numpy_backend = NumpyBackend()

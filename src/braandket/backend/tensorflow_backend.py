@@ -199,37 +199,6 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
         return value, (rem_axes0, rem_axes1)
 
-    # special
-
-    def take(self, values: Iterable[ArrayLike], indices: ArrayLike) -> tf.Tensor:
-        if isinstance(values, (np.ndarray, tf.Tensor)):
-            values = self.convert(values)
-        else:
-            values = self.compact(*values)
-            values = tf.stack(values, axis=-1)
-        indices = tf.expand_dims(indices, axis=-1)
-        indices = tf.cast(indices, tf.int32)
-        value = tf.experimental.numpy.take_along_axis(values, indices, axis=-1)
-        value = tf.squeeze(value, axis=-1)
-        return value
-
-    def choose(self, probs: Iterable[ArrayLike]) -> tf.Tensor:
-        if isinstance(probs, (np.ndarray, tf.Tensor)):
-            probs = self.convert(probs)
-        else:
-            probs = self.compact(*probs)
-            probs = tf.stack(probs, axis=-1)
-        probs = tf.stack(probs, axis=-1)  # [*batch_shape, choose_n]
-        batch_shape = tf.shape(probs)[:-1]
-        batch_size = tf.reduce_prod(batch_shape)
-        probs = tf.reshape(probs, [batch_size, -1])  # [batch_size, choose_n]
-        logits = tf.math.abs(tf.math.log(probs))
-
-        choice = tf.random.categorical(logits, 1)  # [batch_size, 1]
-        choice = choice[:, 0]  # [batch_size]
-        choice = tf.reshape(choice, batch_shape)  # [*batch_shape]
-        return choice
-
 
 tensorflow_backend = TensorflowBackend()
 
