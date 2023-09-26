@@ -139,3 +139,15 @@ class Backend(Generic[BackendValue], abc.ABC):
         bat_axes: tuple[Iterable[int], Iterable[int]],
     ) -> tuple[BackendValue, tuple[tuple[int, ...], tuple[int, ...]]]:
         pass
+
+    # quantum operations
+
+    @abc.abstractmethod
+    def measure_pure_state(self,
+        state: ArrayLike,
+        choice: ArrayLike | None,
+        measure_axes: Iterable[int],
+        reduced_axes: Iterable[int],
+        batches_axes: Iterable[int],
+    ) -> tuple[tuple[int, ...], BackendValue, BackendValue]:
+        pass

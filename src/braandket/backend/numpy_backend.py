@@ -165,5 +165,63 @@ class NumpyBackend(Backend[np.ndarray]):
 
         return value, (rem_axes0, rem_axes1)
 
+    # quantum operations
+
+    def measure_pure_state(self,
+        state: ArrayLike,
+        choice: ArrayLike | None,
+        measure_axes: Iterable[int],
+        reduced_axes: Iterable[int],
+        batches_axes: Iterable[int],
+    ) -> tuple[tuple[int, ...], np.ndarray, np.ndarray]:
+        state = self.convert(state)
+        state_shape = state.shape
+
+        measure_axes = np.asarray(measure_axes, dtype=int)
+        reduced_axes = np.asarray(reduced_axes, dtype=int)
+        batches_axes = np.asarray(batches_axes, dtype=int)
+        choices_shape = np.shape(state)[measure_axes]
+        choices_n = np.prod(choices_shape)
+        batches_shape = np.shape(state)[batches_axes]
+        batches_n = np.prod(batches_shape)
+
+        state = np.transpose(state, [*batches_axes, *measure_axes, *reduced_axes])
+        state = np.reshape(state, [batches_n, choices_n, -1])
+        # [batches_n, choices_n, reduced_n]
+
+        probs = np.abs(np.conj(state) * state)
+        probs = np.sum(probs, axis=-1)
+        # [batches_n, choices_n]
+
+        if choice is None:
+            choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
+            choice = np.asarray(choice, dtype=np.int32)
+            # [batches_n], int32
+        else:
+            choice = np.asarray(choice, dtype=np.int32)
+            choice = np.broadcast_to(choice, batches_shape)
+            choice = np.reshape(choice, [-1])
+            # [batches_n], int32
+
+        chosen_prob = probs[np.arange(batches_n), choice]
+        # [batches_n]
+        chosen_component = state[np.arange(batches_n), choice]
+        # [batches_n, reduced_n]
+
+        chosen_onehot = np.arange(choices_n, dtype=choice.dtype) == np.expand_dims(choice, -1)
+        chosen_onehot = np.asarray(chosen_onehot, dtype=state.dtype)
+        # [batches_n, choices_n]
+        chosen_component = np.expand_dims(chosen_component, axis=-2)
+        chosen_onehot = np.expand_dims(chosen_onehot, axis=-1)
+        chosen_state = chosen_component * chosen_onehot
+        # [batches_n, choices_n, reduced_n]
+
+        chosen_state = np.reshape(chosen_state, state_shape)
+        # [*batches_shape, *measure_shape, *reduced_shape]
+        choice = np.unravel_index(choice, choices_shape)
+        # [choices_d]
+
+        return choice, chosen_prob, chosen_state
+
 
 numpy_backend = NumpyBackend()

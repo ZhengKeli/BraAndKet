@@ -199,6 +199,66 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
         return value, (rem_axes0, rem_axes1)
 
+    # quantum operations
+
+    def measure_pure_state(self,
+        state: ArrayLike,
+        choice: ArrayLike | None,
+        measure_axes: Iterable[int],
+        reduced_axes: Iterable[int],
+        batches_axes: Iterable[int],
+    ) -> tuple[tuple[int, ...], tf.Tensor, tf.Tensor]:
+        state = self.convert(state)
+        state_shape = state.shape
+
+        measure_axes = np.asarray(measure_axes, dtype=int)
+        reduced_axes = np.asarray(reduced_axes, dtype=int)
+        batches_axes = np.asarray(batches_axes, dtype=int)
+        choices_shape = tf.gather(tf.shape(state), measure_axes)
+        choices_n = tf.reduce_prod(choices_shape)
+        batches_shape = tf.gather(tf.shape(state), batches_axes)
+        batches_n = tf.reduce_prod(batches_shape)
+
+        state = tf.transpose(state, [*batches_axes, *measure_axes, *reduced_axes])
+        state = tf.reshape(state, [batches_n, choices_n, -1])
+        # [batches_n, choices_n, reduced_n]
+
+        probs = tf.math.abs(tf.math.conj(state) * state)
+        probs = tf.reduce_sum(probs, axis=-1)
+        # [batches_n, choices_n]
+
+        if choice is None:
+            choice = tf.random.categorical(tf.math.log(probs), 1, dtype=tf.int32)
+            choice = tf.squeeze(choice, axis=-1)
+            # [batches_n], int32
+        else:
+            choice = self.convert(choice, dtype=tf.int32)
+            choice = tf.broadcast_to(choice, batches_shape)
+            choice = tf.reshape(choice, [-1])
+            # [batches_n], int32
+
+        chosen_gather_indices = tf.stack([tf.range(batches_n, dtype=choice.dtype), choice], axis=-1)
+        # [batches_n, 2], int32
+
+        chosen_prob = tf.gather_nd(probs, chosen_gather_indices)
+        # [batches_n]
+        chosen_component = tf.gather_nd(state, chosen_gather_indices)
+        # [batches_n, reduced_n]
+
+        chosen_onehot = tf.one_hot(choice, choices_n, dtype=state.dtype)
+        # [batches_n, choices_n]
+        chosen_component = tf.expand_dims(chosen_component, axis=-2)
+        chosen_onehot = tf.expand_dims(chosen_onehot, axis=-1)
+        chosen_state = chosen_component * chosen_onehot
+        # [batches_n, choices_n, reduced_n]
+
+        chosen_state = tf.reshape(chosen_state, state_shape)
+        # [*batches_shape, *measure_shape, *reduced_shape]
+        choice = tf.unravel_index(choice, choices_shape)
+        # [choices_d]
+
+        return choice, chosen_prob, chosen_state
+
 
 tensorflow_backend = TensorflowBackend()
 
