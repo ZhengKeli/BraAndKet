@@ -278,6 +278,35 @@ class MixedStateTensor(StateTensor[BackendValue]):
                     bra_spaces.append((space.ct, index))
         return self.values(*spaces, *bra_spaces)
 
+    # measurement
+
+    def measure(self,
+        *spaces: KetSpace
+    ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
+        measure_spaces = spaces
+        measure_axes = tuple((self.spaces.index(space), self.spaces.index(space.ct)) for space in spaces)
+        reduced_axes = tuple((self.spaces.index(space), self.spaces.index(space.ct)) for space in self.spaces
+                             if isinstance(space, KetSpace) and space not in spaces)
+
+        measure_axes_set = set(axis for axes in measure_axes for axis in axes)
+        reduced_axes_set = set(axis for axes in reduced_axes for axis in axes)
+        batches_axes = tuple(axis for axis, space in enumerate(self.spaces)
+                             if axis not in measure_axes_set and axis not in reduced_axes_set)
+
+        choice, chosen_prob, chosen_state_value = self.backend.measure_mixed_state(
+            self.values(), None, measure_axes, reduced_axes, batches_axes)
+
+        choice = {sp: choice[spi] for spi, sp in enumerate(measure_spaces)}
+        chosen_state = MixedStateTensor.of(chosen_state_value, [
+            *(self.spaces[axis] for axis in batches_axes),
+            *measure_spaces,
+            *(space.ct for space in measure_spaces),
+            *(self.spaces[axes[0]] for axes in reduced_axes),
+            *(self.spaces[axes[1]] for axes in reduced_axes),
+        ], backend=self.backend)
+
+        return choice, chosen_prob, chosen_state
+
 
 class OperatorTensor(QTensor[BackendValue]):
     @classmethod
