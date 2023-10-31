@@ -166,6 +166,30 @@ class PureStateTensor(StateTensor[BackendValue]):
         probs = self.backend.abs(probs)
         return probs
 
+    # measurement
+
+    def measure(self,
+        *spaces: KetSpace
+    ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
+        measure_spaces = spaces
+        measure_axes = tuple(self.spaces.index(space) for space in spaces)
+        reduced_axes = tuple(axis for axis, space in enumerate(self.spaces)
+                             if isinstance(space, KetSpace) and axis not in measure_axes)
+        batches_axes = tuple(axis for axis, space in enumerate(self.spaces)
+                             if axis not in measure_axes and axis not in reduced_axes)
+
+        choice, chosen_prob, chosen_state_value = self.backend.measure_pure_state(
+            self.values(), None, measure_axes, reduced_axes, batches_axes)
+
+        choice = {sp: choice[spi] for spi, sp in enumerate(measure_spaces)}
+        chosen_state = PureStateTensor.of(chosen_state_value, [
+            *(self.spaces[axis] for axis in batches_axes),
+            *measure_spaces,
+            *(self.spaces[axis] for axis in reduced_axes),
+        ], backend=self.backend)
+
+        return choice, chosen_prob, chosen_state
+
 
 class MixedStateTensor(StateTensor[BackendValue]):
     @classmethod
