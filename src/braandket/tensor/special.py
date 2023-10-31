@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Generic, Iterable, Optional, Union
+from typing import Any, Generic, Iterable, Mapping, Optional, Union
 
 from braandket.backend import Backend, BackendValue, get_default_backend
 from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
@@ -83,6 +83,14 @@ class StateTensor(QTensor[BackendValue], Generic[BackendValue], abc.ABC):
     def probabilities(self,
         *spaces: Union[NumSpace, KetSpace, tuple[Union[NumSpace, KetSpace], Union[int, None]]]
     ) -> BackendValue:
+        pass
+
+    # measurement
+
+    @abc.abstractmethod
+    def measure(self,
+        *spaces: KetSpace
+    ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
         pass
 
 
