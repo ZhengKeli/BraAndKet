@@ -176,10 +176,10 @@ class NumpyBackend(Backend[np.ndarray]):
     ) -> tuple[tuple[int, ...], np.ndarray, np.ndarray]:
         state = self.convert(state)
         state_shape = state.shape
-
         measure_axes = np.asarray(measure_axes, dtype=int)
         reduced_axes = np.asarray(reduced_axes, dtype=int)
         batches_axes = np.asarray(batches_axes, dtype=int)
+
         choices_shape = np.shape(state)[measure_axes]
         choices_n = np.prod(choices_shape)
         batches_shape = np.shape(state)[batches_axes]
@@ -220,6 +220,67 @@ class NumpyBackend(Backend[np.ndarray]):
         # [*batches_shape, *measure_shape, *reduced_shape]
         choice = np.unravel_index(choice, choices_shape)
         # [choices_d]
+
+        return choice, chosen_prob, chosen_state
+
+    def measure_mixed_state(self,
+        state: ArrayLike,
+        choice: ArrayLike | None,
+        measure_axes: Iterable[tuple[int, int]],
+        reduced_axes: Iterable[tuple[int, int]],
+        batches_axes: Iterable[int],
+    ) -> tuple[tuple[int, ...], np.ndarray, np.ndarray]:
+        state = self.convert(state)
+        state_shape = state.shape
+        measure_axes = np.asarray(measure_axes, dtype=int)
+        reduced_axes = np.asarray(reduced_axes, dtype=int)
+        batches_axes = np.asarray(batches_axes, dtype=int)
+
+        choices_shape = np.shape(state)[measure_axes[:, 0]]
+        choices_n = np.prod(choices_shape)
+        reduced_shape = np.shape(state)[reduced_axes[:, 0]]
+        reduced_n = np.prod(reduced_shape)
+        batches_shape = np.shape(state)[batches_axes]
+        batches_n = np.prod(batches_shape)
+
+        state = np.transpose(state, [
+            *batches_axes, *measure_axes[:, 0], *measure_axes[:, 1], *reduced_axes[:, 0], *reduced_axes[:, 1]])
+        state = np.reshape(state, [batches_n, choices_n, choices_n, reduced_n, reduced_n])
+        # [batches_n, choices_n, choices_n, reduced_n, reduced_n]
+
+        probs = np.trace(state, axis1=-1, axis2=-2)
+        # [batches_n, choices_n, choices_n]
+        probs = np.diagonal(probs, axis1=-2, axis2=-1)
+        # [batches_n, choices_n]
+
+        if choice is None:
+            choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
+            choice = np.asarray(choice, dtype=np.int32)
+            # [batches_n], int32
+        else:
+            choice = np.asarray(choice, dtype=np.int32)
+            choice = np.broadcast_to(choice, batches_shape)
+            choice = np.reshape(choice, [-1])
+            # [batches_n], int32
+
+        chosen_prob = probs[np.arange(batches_n), choice]
+        # [batches_n]
+        chosen_component = state[np.arange(batches_n), choice, choice]
+        # [batches_n, reduced_n, reduced_n]
+
+        chosen_onehot = np.zeros([batches_n, choices_n, choices_n], dtype=state.dtype)
+        chosen_onehot[:, choice, choice] = 1.0
+        # [batches_n, choices_n, choices_n]
+
+        chosen_component = np.expand_dims(chosen_component, axis=[-3, -4])
+        chosen_onehot = np.expand_dims(chosen_onehot, axis=[-1, -2])
+        chosen_state = chosen_component * chosen_onehot
+        # [batches_n, choices_n, choices_n, reduced_n, reduced_n]
+
+        chosen_state = np.reshape(chosen_state, state_shape)
+        # [*batches_shape, *measure_shape, *measure_shape, *reduced_shape, *reduced_shape]
+        choice = np.unravel_index(choice, choices_shape)
+        # [batches_n, choices_d]
 
         return choice, chosen_prob, chosen_state
 
