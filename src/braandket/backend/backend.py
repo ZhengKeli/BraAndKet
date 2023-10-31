@@ -151,3 +151,13 @@ class Backend(Generic[BackendValue], abc.ABC):
         batches_axes: Iterable[int],
     ) -> tuple[tuple[int, ...], BackendValue, BackendValue]:
         pass
+
+    @abc.abstractmethod
+    def measure_mixed_state(self,
+        state: ArrayLike,
+        choice: ArrayLike | None,
+        measure_axes: Iterable[tuple[int, int]],
+        reduced_axes: Iterable[tuple[int, int]],
+        batches_axes: Iterable[int],
+    ) -> tuple[tuple[int, ...], BackendValue, BackendValue]:
+        pass
