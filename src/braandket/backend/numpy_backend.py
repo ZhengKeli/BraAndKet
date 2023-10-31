@@ -21,10 +21,10 @@ class NumpyBackend(Backend[np.ndarray]):
     # constructors
 
     def zeros(self, shape: Iterable[int], *, dtype=np.float32) -> np.ndarray:
-        return np.zeros(shape, dtype=dtype)
+        return np.zeros(tuple(shape), dtype=dtype)
 
     def ones(self, shape: Iterable[int], *, dtype=np.float32) -> np.ndarray:
-        return np.ones(shape, dtype=dtype)
+        return np.ones(tuple(shape), dtype=dtype)
 
     def onehot(self, index: int, size: int, *, dtype=np.float32) -> np.ndarray:
         value = np.zeros(size, dtype=dtype)
@@ -82,10 +82,10 @@ class NumpyBackend(Backend[np.ndarray]):
         return value
 
     def reshape(self, value: ArrayLike, shape: Iterable[int]) -> np.ndarray:
-        return np.reshape(value, shape)
+        return np.reshape(value, tuple(shape))
 
     def transpose(self, value: ArrayLike, *, axes: Iterable[int]) -> np.ndarray:
-        return np.transpose(value, axes)
+        return np.transpose(value, tuple(axes))
 
     def expand(self, value: ArrayLike, axes: Iterable[int], sizes: Optional[Iterable[int]] = None) -> np.ndarray:
         axes = tuple(axes)
