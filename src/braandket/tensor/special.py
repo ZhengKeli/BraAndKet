@@ -264,8 +264,8 @@ class OperatorTensor(QTensor[BackendValue]):
     @classmethod
     def from_matrix(cls,
         matrix: BackendValue,
-        ket_spaces: Iterable[KetSpace] | KetSpace,
-        num_spaces: Iterable[NumSpace] | NumSpace = (), *,
+        ket_spaces: Union[Iterable[KetSpace], KetSpace],
+        num_spaces: Union[Iterable[NumSpace], NumSpace] = (), *,
         backend: Optional[Backend] = None
     ) -> 'OperatorTensor':
         num_spaces = (num_spaces,) if isinstance(num_spaces, NumSpace) else tuple(num_spaces)
