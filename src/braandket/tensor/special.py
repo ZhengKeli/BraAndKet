@@ -89,7 +89,7 @@ class StateTensor(QTensor[BackendValue], Generic[BackendValue], abc.ABC):
 
     @abc.abstractmethod
     def measure(self,
-        *spaces: KetSpace
+        *spaces: Union[KetSpace, tuple[KetSpace, int]]
     ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
         pass
 
@@ -169,7 +169,7 @@ class PureStateTensor(StateTensor[BackendValue]):
     # measurement
 
     def measure(self,
-        *spaces: KetSpace
+        *spaces: Union[KetSpace, tuple[KetSpace, int]]
     ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
         measure_spaces = spaces
         measure_axes = tuple(self.spaces.index(space) for space in spaces)
@@ -281,7 +281,7 @@ class MixedStateTensor(StateTensor[BackendValue]):
     # measurement
 
     def measure(self,
-        *spaces: KetSpace
+        *spaces: Union[KetSpace, tuple[KetSpace, int]]
     ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
         measure_spaces = spaces
         measure_axes = tuple((self.spaces.index(space), self.spaces.index(space.ct)) for space in spaces)
