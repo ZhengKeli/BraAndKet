@@ -169,26 +169,32 @@ class PureStateTensor(StateTensor[BackendValue]):
     # measurement
 
     def measure(self,
-        *spaces: Union[KetSpace, tuple[KetSpace, int]]
-    ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
-        measure_spaces = spaces
+        *spaces: Union[KetSpace, tuple[KetSpace, Union[int, BackendValue]]]
+    ) -> tuple[Mapping[KetSpace, Union[int, BackendValue]], BackendValue, 'StateTensor']:
+        if all(isinstance(space, KetSpace) for space in spaces):
+            results = None
+        elif all(isinstance(space_and_result, tuple) for space_and_result in spaces):
+            spaces, results = zip(spaces)
+        else:
+            raise NotImplementedError("Mixing normal and desired measurement is currently not supported!")
+
         measure_axes = tuple(self.spaces.index(space) for space in spaces)
         reduced_axes = tuple(axis for axis, space in enumerate(self.spaces)
                              if isinstance(space, KetSpace) and axis not in measure_axes)
         batches_axes = tuple(axis for axis, space in enumerate(self.spaces)
                              if axis not in measure_axes and axis not in reduced_axes)
 
-        choice, chosen_prob, chosen_state_value = self.backend.measure_pure_state(
-            self.values(), None, measure_axes, reduced_axes, batches_axes)
+        results, prob, state_value = self.backend.measure_pure_state(
+            self.values(), batches_axes, reduced_axes, measure_axes, results)
 
-        choice = {sp: choice[spi] for spi, sp in enumerate(measure_spaces)}
-        chosen_state = PureStateTensor.of(chosen_state_value, [
+        results = {sp: results[spi] for spi, sp in enumerate(spaces)}
+        state = PureStateTensor.of(state_value, [
             *(self.spaces[axis] for axis in batches_axes),
-            *measure_spaces,
+            *spaces,
             *(self.spaces[axis] for axis in reduced_axes),
         ], backend=self.backend)
 
-        return choice, chosen_prob, chosen_state
+        return results, prob, state
 
 
 class MixedStateTensor(StateTensor[BackendValue]):
@@ -283,7 +289,13 @@ class MixedStateTensor(StateTensor[BackendValue]):
     def measure(self,
         *spaces: Union[KetSpace, tuple[KetSpace, int]]
     ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
-        measure_spaces = spaces
+        if all(isinstance(space, KetSpace) for space in spaces):
+            results = None
+        elif all(isinstance(space_and_result, tuple) for space_and_result in spaces):
+            spaces, results = zip(spaces)
+        else:
+            raise NotImplementedError("Mixing normal and desired measurement is currently not supported!")
+
         measure_axes = tuple((self.spaces.index(space), self.spaces.index(space.ct)) for space in spaces)
         reduced_axes = tuple((self.spaces.index(space), self.spaces.index(space.ct)) for space in self.spaces
                              if isinstance(space, KetSpace) and space not in spaces)
@@ -293,19 +305,19 @@ class MixedStateTensor(StateTensor[BackendValue]):
         batches_axes = tuple(axis for axis, space in enumerate(self.spaces)
                              if axis not in measure_axes_set and axis not in reduced_axes_set)
 
-        choice, chosen_prob, chosen_state_value = self.backend.measure_mixed_state(
-            self.values(), None, measure_axes, reduced_axes, batches_axes)
+        results, prob, state_value = self.backend.measure_mixed_state(
+            self.values(), batches_axes, reduced_axes, measure_axes, results)
 
-        choice = {sp: choice[spi] for spi, sp in enumerate(measure_spaces)}
-        chosen_state = MixedStateTensor.of(chosen_state_value, [
+        results = {sp: results[spi] for spi, sp in enumerate(spaces)}
+        state = MixedStateTensor.of(state_value, [
             *(self.spaces[axis] for axis in batches_axes),
-            *measure_spaces,
-            *(space.ct for space in measure_spaces),
+            *spaces,
+            *(space.ct for space in spaces),
             *(self.spaces[axes[0]] for axes in reduced_axes),
             *(self.spaces[axes[1]] for axes in reduced_axes),
         ], backend=self.backend)
 
-        return choice, chosen_prob, chosen_state
+        return results, prob, state
 
 
 class OperatorTensor(QTensor[BackendValue]):
