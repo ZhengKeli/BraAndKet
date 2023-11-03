@@ -228,7 +228,9 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [batches_n, choices_n]
 
         if measure_results is not None:
-            choice = self.convert(measure_results, dtype=tf.int32)
+            measure_results = np.asarray(measure_results, dtype=np.int32)
+            choice = np.ravel_multi_index(measure_results, choices_shape)
+            choice = self.convert(choice, dtype=tf.int32)
             choice = tf.broadcast_to(choice, batches_shape)
             choice = tf.reshape(choice, [-1])
             # [batches_n], int32
@@ -259,8 +261,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
         return choice, chosen_prob, chosen_state
 
-    def measure_mixed_state(
-        self,
+    def measure_mixed_state(self,
         state: ArrayLike,
         batches_axes: Iterable[int],
         reduced_axes: Iterable[tuple[int, int]],

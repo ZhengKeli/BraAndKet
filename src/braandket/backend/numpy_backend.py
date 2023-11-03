@@ -193,14 +193,15 @@ class NumpyBackend(Backend[np.ndarray]):
         probs = np.sum(probs, axis=-1)
         # [batches_n, choices_n]
 
-        if measure_results is None:
-            choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
-            choice = np.asarray(choice, dtype=np.int32)
-            # [batches_n], int32
-        else:
-            choice = np.asarray(measure_results, dtype=np.int32)
+        if measure_results is not None:
+            measure_results = np.asarray(measure_results, dtype=np.int32)
+            choice = np.ravel_multi_index(measure_results, choices_shape)
             choice = np.broadcast_to(choice, batches_shape)
             choice = np.reshape(choice, [-1])
+            # [batches_n], int32
+        else:
+            choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
+            choice = np.asarray(choice, dtype=np.int32)
             # [batches_n], int32
 
         chosen_prob = probs[np.arange(batches_n), choice]
@@ -253,14 +254,15 @@ class NumpyBackend(Backend[np.ndarray]):
         probs = np.diagonal(probs, axis1=-2, axis2=-1)
         # [batches_n, choices_n]
 
-        if measure_results is None:
-            choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
-            choice = np.asarray(choice, dtype=np.int32)
-            # [batches_n], int32
-        else:
-            choice = np.asarray(measure_results, dtype=np.int32)
+        if measure_results is not None:
+            measure_results = np.asarray(measure_results, dtype=np.int32)
+            choice = np.ravel_multi_index(measure_results, choices_shape)
             choice = np.broadcast_to(choice, batches_shape)
             choice = np.reshape(choice, [-1])
+            # [batches_n], int32
+        else:
+            choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
+            choice = np.asarray(choice, dtype=np.int32)
             # [batches_n], int32
 
         chosen_prob = probs[np.arange(batches_n), choice]
