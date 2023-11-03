@@ -203,16 +203,16 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
     def measure_pure_state(self,
         state: ArrayLike,
-        choice: ArrayLike | None,
-        measure_axes: Iterable[int],
-        reduced_axes: Iterable[int],
         batches_axes: Iterable[int],
+        reduced_axes: Iterable[int],
+        measure_axes: Iterable[int],
+        measure_results: Optional[Iterable[ArrayLike]] = None,
     ) -> tuple[tuple[int, ...], tf.Tensor, tf.Tensor]:
         state = self.convert(state)
         state_shape = state.shape
-        measure_axes = np.asarray(measure_axes, dtype=int)
-        reduced_axes = np.asarray(reduced_axes, dtype=int)
         batches_axes = np.asarray(batches_axes, dtype=int)
+        reduced_axes = np.asarray(reduced_axes, dtype=int)
+        measure_axes = np.asarray(measure_axes, dtype=int)
 
         choices_shape = tf.gather(tf.shape(state), measure_axes)
         choices_n = tf.reduce_prod(choices_shape)
@@ -227,14 +227,14 @@ class TensorflowBackend(Backend[tf.Tensor]):
         probs = tf.reduce_sum(probs, axis=-1)
         # [batches_n, choices_n]
 
-        if choice is None:
-            choice = tf.random.categorical(tf.math.log(probs), 1, dtype=tf.int32)
-            choice = tf.squeeze(choice, axis=-1)
-            # [batches_n], int32
-        else:
-            choice = self.convert(choice, dtype=tf.int32)
+        if measure_results is not None:
+            choice = self.convert(measure_results, dtype=tf.int32)
             choice = tf.broadcast_to(choice, batches_shape)
             choice = tf.reshape(choice, [-1])
+            # [batches_n], int32
+        else:
+            choice = tf.random.categorical(tf.math.log(probs), 1, dtype=tf.int32)
+            choice = tf.squeeze(choice, axis=-1)
             # [batches_n], int32
 
         chosen_gather_indices = tf.stack([tf.range(batches_n, dtype=choice.dtype), choice], axis=-1)
@@ -259,12 +259,13 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
         return choice, chosen_prob, chosen_state
 
-    def measure_mixed_state(self,
+    def measure_mixed_state(
+        self,
         state: ArrayLike,
-        choice: ArrayLike | None,
-        measure_axes: Iterable[tuple[int, int]],
-        reduced_axes: Iterable[tuple[int, int]],
         batches_axes: Iterable[int],
+        reduced_axes: Iterable[tuple[int, int]],
+        measure_axes: Iterable[tuple[int, int]],
+        measure_results: Optional[Iterable[ArrayLike]] = None,
     ) -> tuple[tuple[int, ...], tf.Tensor, tf.Tensor]:
         raise NotImplementedError  # TODO
 

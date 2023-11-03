@@ -169,16 +169,16 @@ class NumpyBackend(Backend[np.ndarray]):
 
     def measure_pure_state(self,
         state: ArrayLike,
-        choice: ArrayLike | None,
-        measure_axes: Iterable[int],
-        reduced_axes: Iterable[int],
         batches_axes: Iterable[int],
+        reduced_axes: Iterable[int],
+        measure_axes: Iterable[int],
+        measure_results: Optional[Iterable[ArrayLike]] = None,
     ) -> tuple[tuple[int, ...], np.ndarray, np.ndarray]:
         state = self.convert(state)
         state_shape = state.shape
-        measure_axes = np.asarray(measure_axes, dtype=int)
-        reduced_axes = np.asarray(reduced_axes, dtype=int)
         batches_axes = np.asarray(batches_axes, dtype=int)
+        reduced_axes = np.asarray(reduced_axes, dtype=int)
+        measure_axes = np.asarray(measure_axes, dtype=int)
 
         choices_shape = np.shape(state)[measure_axes]
         choices_n = np.prod(choices_shape)
@@ -193,12 +193,12 @@ class NumpyBackend(Backend[np.ndarray]):
         probs = np.sum(probs, axis=-1)
         # [batches_n, choices_n]
 
-        if choice is None:
+        if measure_results is None:
             choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
             choice = np.asarray(choice, dtype=np.int32)
             # [batches_n], int32
         else:
-            choice = np.asarray(choice, dtype=np.int32)
+            choice = np.asarray(measure_results, dtype=np.int32)
             choice = np.broadcast_to(choice, batches_shape)
             choice = np.reshape(choice, [-1])
             # [batches_n], int32
@@ -225,16 +225,16 @@ class NumpyBackend(Backend[np.ndarray]):
 
     def measure_mixed_state(self,
         state: ArrayLike,
-        choice: ArrayLike | None,
-        measure_axes: Iterable[tuple[int, int]],
-        reduced_axes: Iterable[tuple[int, int]],
         batches_axes: Iterable[int],
+        reduced_axes: Iterable[tuple[int, int]],
+        measure_axes: Iterable[tuple[int, int]],
+        measure_results: Optional[Iterable[ArrayLike]] = None,
     ) -> tuple[tuple[int, ...], np.ndarray, np.ndarray]:
         state = self.convert(state)
         state_shape = state.shape
-        measure_axes = np.asarray(measure_axes, dtype=int)
-        reduced_axes = np.asarray(reduced_axes, dtype=int)
         batches_axes = np.asarray(batches_axes, dtype=int)
+        reduced_axes = np.asarray(reduced_axes, dtype=int)
+        measure_axes = np.asarray(measure_axes, dtype=int)
 
         choices_shape = np.shape(state)[measure_axes[:, 0]]
         choices_n = np.prod(choices_shape)
@@ -253,12 +253,12 @@ class NumpyBackend(Backend[np.ndarray]):
         probs = np.diagonal(probs, axis1=-2, axis2=-1)
         # [batches_n, choices_n]
 
-        if choice is None:
+        if measure_results is None:
             choice = np.apply_along_axis(lambda ps: np.random.choice(choices_n, p=ps), 0, probs)
             choice = np.asarray(choice, dtype=np.int32)
             # [batches_n], int32
         else:
-            choice = np.asarray(choice, dtype=np.int32)
+            choice = np.asarray(measure_results, dtype=np.int32)
             choice = np.broadcast_to(choice, batches_shape)
             choice = np.reshape(choice, [-1])
             # [batches_n], int32

@@ -145,19 +145,19 @@ class Backend(Generic[BackendValue], abc.ABC):
     @abc.abstractmethod
     def measure_pure_state(self,
         state: ArrayLike,
-        choice: ArrayLike | None,
-        measure_axes: Iterable[int],
-        reduced_axes: Iterable[int],
         batches_axes: Iterable[int],
+        reduced_axes: Iterable[int],
+        measure_axes: Iterable[int],
+        measure_results: Optional[Iterable[ArrayLike]] = None,
     ) -> tuple[tuple[int, ...], BackendValue, BackendValue]:
         pass
 
     @abc.abstractmethod
     def measure_mixed_state(self,
         state: ArrayLike,
-        choice: ArrayLike | None,
-        measure_axes: Iterable[tuple[int, int]],
-        reduced_axes: Iterable[tuple[int, int]],
         batches_axes: Iterable[int],
+        reduced_axes: Iterable[tuple[int, int]],
+        measure_axes: Iterable[tuple[int, int]],
+        results: Optional[Iterable[ArrayLike]] = None,
     ) -> tuple[tuple[int, ...], BackendValue, BackendValue]:
         pass
