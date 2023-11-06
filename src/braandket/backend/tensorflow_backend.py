@@ -245,7 +245,9 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [batches_n]
         chosen_component = tf.gather_nd(state, chosen_gather_indices)
         # [batches_n, reduced_n]
-        chosen_component /= tf.expand_dims(chosen_prob, axis=-1)  # normalization
+        chosen_component /= tf.cast(
+            tf.expand_dims(chosen_prob, axis=-1),
+            dtype=chosen_component.dtype)  # normalization
         # [batches_n, reduced_n]
 
         chosen_onehot = tf.one_hot(choice, choices_n, dtype=state.dtype)
@@ -313,7 +315,9 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [batches_n, 3], int32
         chosen_component = tf.gather_nd(state, chosen_component_gather_indices)
         # [batches_n, reduced_n, reduced_n]
-        chosen_component /= tf.expand_dims(tf.expand_dims(chosen_prob, axis=-1), axis=-1)  # normalization
+        chosen_component /= tf.cast(
+            tf.expand_dims(tf.expand_dims(chosen_prob, axis=-1), axis=-1),
+            dtype=chosen_component.dtype)  # normalization
         # [batches_n, reduced_n, reduced_n]
 
         chosen_onehot_indices = choice + choice * choices_n
