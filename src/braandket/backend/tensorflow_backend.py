@@ -228,11 +228,10 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [batches_n, choices_n]
 
         if measure_results is not None:
-            measure_results = np.asarray(measure_results, dtype=np.int32)
-            choice = np.ravel_multi_index(measure_results, choices_shape)
-            choice = self.convert(choice, dtype=tf.int32)
-            choice = tf.broadcast_to(choice, batches_shape)
-            choice = tf.reshape(choice, [-1])
+            measure_results = [tf.convert_to_tensor(r, dtype=np.int32) for r in measure_results]
+            measure_results = tf.stack(measure_results, axis=-1)
+            choice = tf_ravel_index(measure_results, choices_shape)
+            choice = tf.broadcast_to(choice, [batches_n])
             # [batches_n], int32
         else:
             choice = tf.random.categorical(tf.math.log(probs), 1, dtype=tf.int32)
@@ -295,11 +294,11 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [batches_n, choices_n]
 
         if measure_results is not None:
-            measure_results = np.asarray(measure_results, dtype=np.int32)
-            choice = np.ravel_multi_index(measure_results, choices_shape)
+            measure_results = [tf.convert_to_tensor(r, dtype=np.int32) for r in measure_results]
+            measure_results = tf.stack(measure_results, axis=-1)
+            choice = tf_ravel_index(measure_results, choices_shape)
             choice = self.convert(choice, dtype=tf.int32)
-            choice = tf.broadcast_to(choice, batches_shape)
-            choice = tf.reshape(choice, [-1])
+            choice = tf.broadcast_to(choice, [batches_n])
             # [batches_n], int32
         else:
             choice = tf.random.categorical(tf.math.log(probs), 1, dtype=tf.int32)
@@ -366,3 +365,10 @@ def get_compact_dtype(dtype0: tf.DType, *dtypes: tf.DType) -> tf.DType:
         group_i = max(group_i, gi)
         item_i = max(item_i, ii)
     return _grouped_dtypes[group_i][item_i]
+
+
+def tf_ravel_index(index: tf.Tensor, shape: tf.Tensor) -> tf.Tensor:
+    # index: [...,shape_d]
+    # shape: [shape_d]
+    # result: [...]
+    return tf.reduce_sum(index * tf.math.cumprod(shape, reverse=True), axis=-1)
