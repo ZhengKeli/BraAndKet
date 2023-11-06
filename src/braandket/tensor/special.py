@@ -174,7 +174,7 @@ class PureStateTensor(StateTensor[BackendValue]):
         if all(isinstance(space, KetSpace) for space in spaces):
             results = None
         elif all(isinstance(space_and_result, tuple) for space_and_result in spaces):
-            spaces, results = zip(spaces)
+            spaces, results = zip(*spaces)
         else:
             raise NotImplementedError("Mixing normal and desired measurement is currently not supported!")
 
@@ -292,7 +292,7 @@ class MixedStateTensor(StateTensor[BackendValue]):
         if all(isinstance(space, KetSpace) for space in spaces):
             results = None
         elif all(isinstance(space_and_result, tuple) for space_and_result in spaces):
-            spaces, results = zip(spaces)
+            spaces, results = zip(*spaces)
         else:
             raise NotImplementedError("Mixing normal and desired measurement is currently not supported!")
 
