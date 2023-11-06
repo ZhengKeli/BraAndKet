@@ -214,10 +214,10 @@ class TensorflowBackend(Backend[tf.Tensor]):
         reduced_axes = np.asarray(reduced_axes, dtype=int)
         measure_axes = np.asarray(measure_axes, dtype=int)
 
-        choices_shape = tf.gather(tf.shape(state), measure_axes)
-        choices_n = tf.reduce_prod(choices_shape)
         batches_shape = tf.gather(tf.shape(state), batches_axes)
         batches_n = tf.reduce_prod(batches_shape)
+        choices_shape = tf.gather(tf.shape(state), measure_axes)
+        choices_n = tf.reduce_prod(choices_shape)
 
         state = tf.transpose(state, [*batches_axes, *measure_axes, *reduced_axes])
         state = tf.reshape(state, [batches_n, choices_n, -1])

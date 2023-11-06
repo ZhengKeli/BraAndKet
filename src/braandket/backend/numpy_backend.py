@@ -180,10 +180,10 @@ class NumpyBackend(Backend[np.ndarray]):
         reduced_axes = np.asarray(reduced_axes, dtype=int)
         measure_axes = np.asarray(measure_axes, dtype=int)
 
-        choices_shape = np.shape(state)[measure_axes]
-        choices_n = np.prod(choices_shape)
         batches_shape = np.shape(state)[batches_axes]
         batches_n = np.prod(batches_shape)
+        choices_shape = np.shape(state)[measure_axes]
+        choices_n = np.prod(choices_shape)
 
         state = np.transpose(state, [*batches_axes, *measure_axes, *reduced_axes])
         state = np.reshape(state, [batches_n, choices_n, -1])
@@ -239,12 +239,12 @@ class NumpyBackend(Backend[np.ndarray]):
         reduced_axes = np.asarray(reduced_axes, dtype=int)
         measure_axes = np.asarray(measure_axes, dtype=int)
 
-        choices_shape = np.shape(state)[measure_axes[:, 0]]
-        choices_n = np.prod(choices_shape)
-        reduced_shape = np.shape(state)[reduced_axes[:, 0]]
-        reduced_n = np.prod(reduced_shape)
         batches_shape = np.shape(state)[batches_axes]
         batches_n = np.prod(batches_shape)
+        reduced_shape = np.shape(state)[reduced_axes[:, 0]]
+        reduced_n = np.prod(reduced_shape)
+        choices_shape = np.shape(state)[measure_axes[:, 0]]
+        choices_n = np.prod(choices_shape)
 
         state = np.transpose(state, [
             *batches_axes, *measure_axes[:, 0], *measure_axes[:, 1], *reduced_axes[:, 0], *reduced_axes[:, 1]])
