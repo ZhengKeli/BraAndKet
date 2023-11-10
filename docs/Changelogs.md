@@ -1,3 +1,22 @@
+# v0.8.6
+
+Breaking changes:
+
+* Removed `Backend.take()` and `Backend.choose()`, and also corresponding functions `bnk.choose()` and `bnk.take()`.
+
+New features:
+
+* Added method `measure()` in `StateTensor`, along with method `measure_pure_state()` and `measure_mixed_state()`
+  in `Backend`.
+
+Bug fixes:
+
+* Replaced `|` with `Union` to avoid `SyntaxError` in lower python versions.
+
+Improvements:
+
+* Added the calling of `backend.abs()` in `PureStateTensor.probabilities()`.
+
 # v0.8.5
 
 Breaking changes:
