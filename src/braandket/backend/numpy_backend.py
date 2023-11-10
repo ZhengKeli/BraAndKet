@@ -195,13 +195,15 @@ class NumpyBackend(Backend[np.ndarray]):
 
         if measure_results is not None:
             measure_results = np.asarray(measure_results, dtype=np.int32)
+            # [(*batches_shape), choices_d], int32
             choice = np.ravel_multi_index(measure_results, choices_shape)
+            # [(*batches_shape)], int32
             choice = np.broadcast_to(choice, batches_shape)
+            # [*batches_shape], int32
             choice = np.reshape(choice, [-1])
             # [batches_n], int32
         else:
             choice = np_batched_choice(probs)
-            choice = np.asarray(choice, dtype=np.int32)
             # [batches_n], int32
 
         chosen_prob = probs[np.arange(batches_n), choice]
@@ -219,10 +221,14 @@ class NumpyBackend(Backend[np.ndarray]):
         chosen_state = chosen_component * chosen_onehot
         # [batches_n, choices_n, reduced_n]
 
+        choice = np.unravel_index(choice, choices_shape)
+        # [batches_n, choices_d]
+        choice = np.reshape(choice, [*batches_shape, len(measure_axes)])
+        # [*batches_shape, choices_d]
+        chosen_prob = np.reshape(chosen_prob, batches_shape)
+        # [*batches_shape]
         chosen_state = np.reshape(chosen_state, state_shape)
         # [*batches_shape, *measure_shape, *reduced_shape]
-        choice = np.unravel_index(choice, choices_shape)
-        # [choices_d]
 
         return choice, chosen_prob, chosen_state
 
@@ -258,13 +264,15 @@ class NumpyBackend(Backend[np.ndarray]):
 
         if measure_results is not None:
             measure_results = np.asarray(measure_results, dtype=np.int32)
+            # [(*batches_shape), choices_d], int32
             choice = np.ravel_multi_index(measure_results, choices_shape)
+            # [(*batches_shape)], int32
             choice = np.broadcast_to(choice, batches_shape)
+            # [*batches_shape], int32
             choice = np.reshape(choice, [-1])
             # [batches_n], int32
         else:
             choice = np_batched_choice(probs)
-            choice = np.asarray(choice, dtype=np.int32)
             # [batches_n], int32
 
         chosen_prob = probs[np.arange(batches_n), choice]
@@ -283,10 +291,14 @@ class NumpyBackend(Backend[np.ndarray]):
         chosen_state = chosen_component * chosen_onehot
         # [batches_n, choices_n, choices_n, reduced_n, reduced_n]
 
-        chosen_state = np.reshape(chosen_state, state_shape)
-        # [*batches_shape, *measure_shape, *measure_shape, *reduced_shape, *reduced_shape]
         choice = np.unravel_index(choice, choices_shape)
         # [batches_n, choices_d]
+        choice = np.reshape(choice, [*batches_shape, len(measure_axes)])
+        # [*batches_shape, choices_d]
+        chosen_prob = np.reshape(chosen_prob, batches_shape)
+        # [*batches_shape]
+        chosen_state = np.reshape(chosen_state, state_shape)
+        # [*batches_shape, *measure_shape, *measure_shape, *reduced_shape, *reduced_shape]
 
         return choice, chosen_prob, chosen_state
 
@@ -303,4 +315,6 @@ def np_batched_choice(probs: np.ndarray) -> np.ndarray:
         choice = np.expand_dims(choice, axis=0)
         return choice
 
-    return np.apply_over_axes(choice_sample, probs, 0)
+    choices = np.apply_over_axes(choice_sample, probs, 0)
+    choices = np.asarray(choices, dtype=np.int32)
+    return choices

@@ -228,10 +228,13 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [batches_n, choices_n]
 
         if measure_results is not None:
-            measure_results = [tf.convert_to_tensor(r, dtype=np.int32) for r in measure_results]
-            measure_results = tf.stack(measure_results, axis=-1)
+            measure_results = tf.convert_to_tensor(measure_results, dtype=np.int32)
+            # [(*batches_shape), choices_d], int32
             choice = tf_ravel_index(measure_results, choices_shape)
-            choice = tf.broadcast_to(choice, [batches_n])
+            # [(*batches_shape)], int32
+            choice = tf.broadcast_to(choice, batches_shape)
+            # [*batches_shape], int32
+            choice = tf.reshape(choice, [-1])
             # [batches_n], int32
         else:
             choice = tf.random.categorical(tf.math.log(probs), 1, dtype=tf.int32)
@@ -256,10 +259,14 @@ class TensorflowBackend(Backend[tf.Tensor]):
         chosen_state = chosen_component * chosen_onehot
         # [batches_n, choices_n, reduced_n]
 
+        choice = tf.unravel_index(choice, choices_shape)
+        # [batches_n, choices_d]
+        choice = tf.reshape(choice, [*batches_shape, len(measure_axes)])
+        # [*batches_shape, choices_d]
+        chosen_prob = tf.reshape(chosen_prob, batches_shape)
+        # [*batches_shape]
         chosen_state = tf.reshape(chosen_state, state_shape)
         # [*batches_shape, *measure_shape, *reduced_shape]
-        choice = tf.unravel_index(choice, choices_shape)
-        # [choices_d]
 
         return choice, chosen_prob, chosen_state
 
@@ -294,11 +301,13 @@ class TensorflowBackend(Backend[tf.Tensor]):
         # [batches_n, choices_n]
 
         if measure_results is not None:
-            measure_results = [tf.convert_to_tensor(r, dtype=np.int32) for r in measure_results]
-            measure_results = tf.stack(measure_results, axis=-1)
+            measure_results = tf.convert_to_tensor(measure_results, dtype=np.int32)
+            # [(*batches_shape), choices_d], int32
             choice = tf_ravel_index(measure_results, choices_shape)
-            choice = self.convert(choice, dtype=tf.int32)
-            choice = tf.broadcast_to(choice, [batches_n])
+            # [(*batches_shape)], int32
+            choice = tf.broadcast_to(choice, batches_shape)
+            # [*batches_shape], int32
+            choice = tf.reshape(choice, [-1])
             # [batches_n], int32
         else:
             choice = tf.random.categorical(tf.math.log(probs), 1, dtype=tf.int32)
@@ -329,10 +338,14 @@ class TensorflowBackend(Backend[tf.Tensor]):
         chosen_state = chosen_component * chosen_onehot
         # [batches_n, choices_n, choices_n, reduced_n, reduced_n]
 
-        chosen_state = tf.reshape(chosen_state, state_shape)
-        # [*batches_shape, *measure_shape, *measure_shape, *reduced_shape, *reduced_shape]
         choice = tf.unravel_index(choice, choices_shape)
         # [batches_n, choices_d]
+        choice = tf.reshape(choice, [*batches_shape, len(measure_axes)])
+        # [*batches_shape, choices_d]
+        chosen_prob = tf.reshape(chosen_prob, batches_shape)
+        # [*batches_shape]
+        chosen_state = tf.reshape(chosen_state, state_shape)
+        # [*batches_shape, *measure_shape, *measure_shape, *reduced_shape, *reduced_shape]
 
         return choice, chosen_prob, chosen_state
 
