@@ -172,8 +172,8 @@ class NumpyBackend(Backend[np.ndarray]):
         batches_axes: Iterable[int],
         reduced_axes: Iterable[int],
         measure_axes: Iterable[int],
-        measure_results: Optional[Iterable[ArrayLike]] = None,
-    ) -> tuple[tuple[int | np.ndarray, ...], np.ndarray, np.ndarray]:
+        measure_results: Optional[ArrayLike] = None,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         state = self.convert(state)
         state_shape = state.shape
         batches_axes = np.asarray(batches_axes, dtype=int)
@@ -231,8 +231,8 @@ class NumpyBackend(Backend[np.ndarray]):
         batches_axes: Iterable[int],
         reduced_axes: Iterable[tuple[int, int]],
         measure_axes: Iterable[tuple[int, int]],
-        measure_results: Optional[Iterable[ArrayLike]] = None,
-    ) -> tuple[tuple[int | np.ndarray, ...], np.ndarray, np.ndarray]:
+        measure_results: Optional[ArrayLike] = None,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         state = self.convert(state)
         state_shape = state.shape
         batches_axes = np.asarray(batches_axes, dtype=int)

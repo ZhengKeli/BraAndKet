@@ -206,8 +206,8 @@ class TensorflowBackend(Backend[tf.Tensor]):
         batches_axes: Iterable[int],
         reduced_axes: Iterable[int],
         measure_axes: Iterable[int],
-        measure_results: Optional[Iterable[ArrayLike]] = None,
-    ) -> tuple[tuple[int, ...], tf.Tensor, tf.Tensor]:
+        measure_results: Optional[ArrayLike] = None,
+    ) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
         state = self.convert(state)
         state_shape = state.shape
         batches_axes = np.asarray(batches_axes, dtype=int)
@@ -268,8 +268,8 @@ class TensorflowBackend(Backend[tf.Tensor]):
         batches_axes: Iterable[int],
         reduced_axes: Iterable[tuple[int, int]],
         measure_axes: Iterable[tuple[int, int]],
-        measure_results: Optional[Iterable[ArrayLike]] = None,
-    ) -> tuple[tuple[int, ...], tf.Tensor, tf.Tensor]:
+        measure_results: Optional[ArrayLike] = None,
+    ) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor]:
         state = self.convert(state)
         state_shape = state.shape
         batches_axes = np.asarray(batches_axes, dtype=int)

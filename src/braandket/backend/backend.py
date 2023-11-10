@@ -148,8 +148,8 @@ class Backend(Generic[BackendValue], abc.ABC):
         batches_axes: Iterable[int],
         reduced_axes: Iterable[int],
         measure_axes: Iterable[int],
-        measure_results: Optional[Iterable[ArrayLike]] = None,
-    ) -> tuple[tuple[int, ...], BackendValue, BackendValue]:
+        measure_results: Optional[ArrayLike] = None,
+    ) -> tuple[BackendValue, BackendValue, BackendValue]:
         pass
 
     @abc.abstractmethod
@@ -158,6 +158,6 @@ class Backend(Generic[BackendValue], abc.ABC):
         batches_axes: Iterable[int],
         reduced_axes: Iterable[tuple[int, int]],
         measure_axes: Iterable[tuple[int, int]],
-        results: Optional[Iterable[ArrayLike]] = None,
-    ) -> tuple[tuple[int, ...], BackendValue, BackendValue]:
+        measure_results: Optional[ArrayLike] = None,
+    ) -> tuple[BackendValue, BackendValue, BackendValue]:
         pass
