@@ -371,4 +371,6 @@ def tf_ravel_index(index: tf.Tensor, shape: tf.Tensor) -> tf.Tensor:
     # index: [...,shape_d]
     # shape: [shape_d]
     # result: [...]
-    return tf.reduce_sum(index * tf.math.cumprod(shape, reverse=True), axis=-1)
+    shape_cumprod = tf.math.cumprod(shape, reverse=True)
+    shape_cumprod = tf.concat([shape_cumprod[1:], tf.constant([1], dtype=shape_cumprod.dtype)], axis=0)
+    return tf.reduce_sum(index * shape_cumprod, axis=-1)
