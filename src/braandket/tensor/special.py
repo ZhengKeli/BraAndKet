@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Generic, Iterable, Mapping, Optional, Union
+from typing import Any, Generic, Iterable, Optional, Union, overload
 
 from braandket.backend import Backend, BackendValue, get_default_backend
 from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
@@ -87,11 +87,54 @@ class StateTensor(QTensor[BackendValue], Generic[BackendValue], abc.ABC):
 
     # measurement
 
+    @overload
     @abc.abstractmethod
     def measure(self,
-        *spaces: Union[KetSpace, tuple[KetSpace, int]]
-    ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
+        space: Union[KetSpace, tuple[KetSpace, int]],
+    ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
         pass
+
+    @overload
+    @abc.abstractmethod
+    def measure(self,
+        space0: Union[KetSpace, tuple[KetSpace, int]],
+        space1: Union[KetSpace, tuple[KetSpace, int]],
+        *spaces: Union[KetSpace, tuple[KetSpace, int]]
+    ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
+        pass
+
+    @overload
+    @abc.abstractmethod
+    def measure(self,
+        spaces: Iterable[Union[KetSpace, tuple[KetSpace, int]]]
+    ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
+        pass
+
+    @abc.abstractmethod
+    def measure(self,
+        *args: Union[KetSpace, tuple[KetSpace, int], Iterable[Union[KetSpace, tuple[KetSpace, int]]]]
+    ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
+        pass
+
+    @classmethod
+    def _formalize_measure_args(cls,
+        *args: Union[KetSpace, tuple[KetSpace, int], Iterable[Union[KetSpace, tuple[KetSpace, int]]]]
+    ) -> tuple[bool, Iterable[KetSpace], Optional[Iterable[int]]]:
+        if len(args) == 1:
+            if isinstance(args[0], KetSpace):
+                return True, args, None
+            elif isinstance(args[0], tuple) and len(args[0]) == 2 and isinstance(args[0][0], KetSpace):
+                spaces, results = zip(*args)
+                return True, spaces, results
+            elif isinstance(args[0], Iterable):
+                args = tuple(args[0])
+        if all(isinstance(arg, KetSpace) for arg in args):
+            return False, args, None
+        elif all(isinstance(arg, tuple) for arg in args):
+            spaces, results = zip(*args)
+            return False, spaces, results
+        else:
+            raise NotImplementedError("Mixing normal and desired measurement is currently not supported!")
 
 
 class PureStateTensor(StateTensor[BackendValue]):
@@ -169,14 +212,9 @@ class PureStateTensor(StateTensor[BackendValue]):
     # measurement
 
     def measure(self,
-        *spaces: Union[KetSpace, tuple[KetSpace, Union[int, BackendValue]]]
-    ) -> tuple[Mapping[KetSpace, Union[int, BackendValue]], BackendValue, 'StateTensor']:
-        if all(isinstance(space, KetSpace) for space in spaces):
-            results = None
-        elif all(isinstance(space_and_result, tuple) for space_and_result in spaces):
-            spaces, results = zip(*spaces)
-        else:
-            raise NotImplementedError("Mixing normal and desired measurement is currently not supported!")
+        *args: Union[KetSpace, tuple[KetSpace, int], Iterable[Union[KetSpace, tuple[KetSpace, int]]]]
+    ) -> tuple[Union[BackendValue, Iterable[BackendValue]], BackendValue, 'StateTensor']:
+        single, spaces, results = self._formalize_measure_args(*args)
 
         measure_axes = tuple(self.spaces.index(space) for space in spaces)
         reduced_axes = tuple(axis for axis, space in enumerate(self.spaces)
@@ -187,7 +225,7 @@ class PureStateTensor(StateTensor[BackendValue]):
         results, prob, state_value = self.backend.measure_pure_state(
             self.values(), batches_axes, reduced_axes, measure_axes, results)
 
-        results = {sp: results[spi] for spi, sp in enumerate(spaces)}
+        results = results[..., 0] if single else results
         state = PureStateTensor.of(state_value, [
             *(self.spaces[axis] for axis in batches_axes),
             *spaces,
@@ -287,14 +325,9 @@ class MixedStateTensor(StateTensor[BackendValue]):
     # measurement
 
     def measure(self,
-        *spaces: Union[KetSpace, tuple[KetSpace, int]]
-    ) -> tuple[Mapping[KetSpace, int], BackendValue, 'StateTensor']:
-        if all(isinstance(space, KetSpace) for space in spaces):
-            results = None
-        elif all(isinstance(space_and_result, tuple) for space_and_result in spaces):
-            spaces, results = zip(*spaces)
-        else:
-            raise NotImplementedError("Mixing normal and desired measurement is currently not supported!")
+        *args: Union[KetSpace, tuple[KetSpace, int], Iterable[Union[KetSpace, tuple[KetSpace, int]]]]
+    ) -> tuple[Union[BackendValue, Iterable[BackendValue]], BackendValue, 'StateTensor']:
+        single, spaces, results = self._formalize_measure_args(*args)
 
         measure_axes = tuple((self.spaces.index(space), self.spaces.index(space.ct)) for space in spaces)
         reduced_axes = tuple((self.spaces.index(space), self.spaces.index(space.ct)) for space in self.spaces
@@ -308,7 +341,7 @@ class MixedStateTensor(StateTensor[BackendValue]):
         results, prob, state_value = self.backend.measure_mixed_state(
             self.values(), batches_axes, reduced_axes, measure_axes, results)
 
-        results = {sp: results[spi] for spi, sp in enumerate(spaces)}
+        results = results[..., 0] if single else results
         state = MixedStateTensor.of(state_value, [
             *(self.spaces[axis] for axis in batches_axes),
             *spaces,
