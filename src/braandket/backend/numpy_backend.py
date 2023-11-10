@@ -208,7 +208,7 @@ class NumpyBackend(Backend[np.ndarray]):
         # [batches_n]
         chosen_component = state[np.arange(batches_n), choice]
         # [batches_n, reduced_n]
-        chosen_component /= np.expand_dims(chosen_prob, axis=-1)  # normalization
+        chosen_component /= np.expand_dims(np.sqrt(chosen_prob), axis=-1)  # normalization
         # [batches_n, reduced_n]
 
         chosen_onehot = np.arange(choices_n, dtype=choice.dtype) == np.expand_dims(choice, -1)

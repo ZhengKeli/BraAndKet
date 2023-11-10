@@ -245,7 +245,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
         chosen_component = tf.gather_nd(state, chosen_gather_indices)
         # [batches_n, reduced_n]
         chosen_component /= tf.cast(
-            tf.expand_dims(chosen_prob, axis=-1),
+            tf.expand_dims(tf.sqrt(chosen_prob), axis=-1),
             dtype=chosen_component.dtype)  # normalization
         # [batches_n, reduced_n]
 
