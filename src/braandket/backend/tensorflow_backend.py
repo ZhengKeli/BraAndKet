@@ -261,7 +261,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
         choice = tf.unravel_index(choice, choices_shape)
         # [batches_n, choices_d]
-        choice = tf.reshape(choice, [*batches_shape, len(measure_axes)])
+        choice = tf.reshape(choice, tf.concat([batches_shape, [len(measure_axes)]], axis=0))
         # [*batches_shape, choices_d]
         chosen_prob = tf.reshape(chosen_prob, batches_shape)
         # [*batches_shape]
@@ -340,7 +340,7 @@ class TensorflowBackend(Backend[tf.Tensor]):
 
         choice = tf.unravel_index(choice, choices_shape)
         # [batches_n, choices_d]
-        choice = tf.reshape(choice, [*batches_shape, len(measure_axes)])
+        choice = tf.reshape(choice, tf.concat([batches_shape, [len(measure_axes)]], axis=0))
         # [*batches_shape, choices_d]
         chosen_prob = tf.reshape(chosen_prob, batches_shape)
         # [*batches_shape]
