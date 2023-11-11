@@ -123,7 +123,8 @@ class StateTensor(QTensor[BackendValue], Generic[BackendValue], abc.ABC):
         if len(args) == 1:
             if isinstance(args[0], KetSpace):
                 return True, args, None
-            elif isinstance(args[0], tuple) and len(args[0]) == 2 and isinstance(args[0][0], KetSpace):
+            elif isinstance(args[0], tuple) and len(args[0]) == 2 \
+                    and isinstance(args[0][0], KetSpace) and not isinstance(args[0][1], KetSpace):
                 spaces, results = zip(*args)
                 return True, spaces, results
             elif isinstance(args[0], Iterable):
