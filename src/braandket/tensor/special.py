@@ -1,7 +1,7 @@
 import abc
 from typing import Any, Generic, Iterable, Optional, Union, overload
 
-from braandket.backend import Backend, BackendValue, get_default_backend
+from braandket.backend import ArrayLike, Backend, BackendValue, get_default_backend
 from braandket.space import BraSpace, HSpace, KetSpace, NumSpace, Space
 from .tensor import QTensor
 
@@ -90,29 +90,29 @@ class StateTensor(QTensor[BackendValue], Generic[BackendValue], abc.ABC):
     @overload
     @abc.abstractmethod
     def measure(self,
-        space: Union[KetSpace, tuple[KetSpace, int]],
+        space: Union[KetSpace, tuple[KetSpace, ArrayLike]],
     ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
         pass
 
     @overload
     @abc.abstractmethod
     def measure(self,
-        space0: Union[KetSpace, tuple[KetSpace, int]],
-        space1: Union[KetSpace, tuple[KetSpace, int]],
-        *spaces: Union[KetSpace, tuple[KetSpace, int]]
+        space0: Union[KetSpace, tuple[KetSpace, ArrayLike]],
+        space1: Union[KetSpace, tuple[KetSpace, ArrayLike]],
+        *spaces: Union[KetSpace, tuple[KetSpace, ArrayLike]]
     ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
         pass
 
     @overload
     @abc.abstractmethod
     def measure(self,
-        spaces: Iterable[Union[KetSpace, tuple[KetSpace, int]]]
+        spaces: Iterable[Union[KetSpace, tuple[KetSpace, ArrayLike]]]
     ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
         pass
 
     @abc.abstractmethod
     def measure(self,
-        *args: Union[KetSpace, tuple[KetSpace, int], Iterable[Union[KetSpace, tuple[KetSpace, int]]]]
+        *args: Union[KetSpace, tuple[KetSpace, ArrayLike], Iterable[Union[KetSpace, tuple[KetSpace, ArrayLike]]]]
     ) -> tuple[BackendValue, BackendValue, 'StateTensor']:
         pass
 
@@ -213,7 +213,7 @@ class PureStateTensor(StateTensor[BackendValue]):
     # measurement
 
     def measure(self,
-        *args: Union[KetSpace, tuple[KetSpace, int], Iterable[Union[KetSpace, tuple[KetSpace, int]]]]
+        *args: Union[KetSpace, tuple[KetSpace, ArrayLike], Iterable[Union[KetSpace, tuple[KetSpace, ArrayLike]]]]
     ) -> tuple[Union[BackendValue, Iterable[BackendValue]], BackendValue, 'StateTensor']:
         single, spaces, results = self._formalize_measure_args(*args)
 
@@ -326,7 +326,7 @@ class MixedStateTensor(StateTensor[BackendValue]):
     # measurement
 
     def measure(self,
-        *args: Union[KetSpace, tuple[KetSpace, int], Iterable[Union[KetSpace, tuple[KetSpace, int]]]]
+        *args: Union[KetSpace, tuple[KetSpace, ArrayLike], Iterable[Union[KetSpace, tuple[KetSpace, ArrayLike]]]]
     ) -> tuple[Union[BackendValue, Iterable[BackendValue]], BackendValue, 'StateTensor']:
         single, spaces, results = self._formalize_measure_args(*args)
 
