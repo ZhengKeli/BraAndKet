@@ -21,8 +21,3 @@ authors = [{ name = "Zheng Keli", email = "zhengkeli2009@126.com" }]
 requires-python = ">=3.8"
 dependencies = ["numpy"]
 optional-dependencies.tf = ["tensorflow"]
-
-
-[tool.setuptools]
-package-dir = { "" = "src" }
-packages.find.where = ["src"]
