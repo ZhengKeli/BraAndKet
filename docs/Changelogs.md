@@ -1,3 +1,13 @@
+# v0.8.6.post1
+
+Bug fixes:
+
+* Fixed the error that occurs when giving a tuple of two `KetSpace` to `StateTensor.measure()`.
+
+Improvements:
+
+* Optimized the signature of `StateTensor.measure()`.
+
 # v0.8.6
 
 Breaking changes:
